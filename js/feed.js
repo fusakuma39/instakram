@@ -58,6 +58,10 @@ class FeedController {
     if (this.lightboxCaption) {
       this.lightboxCaption.textContent = captionText || "";
     }
+    const fullSizeLink = document.getElementById("lightboxFullSizeLink");
+    if (fullSizeLink) {
+      fullSizeLink.href = photoUrl.replace("&sz=w1000", "");
+    }
     this.lightboxModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     if (window.lucide) window.lucide.createIcons();
@@ -165,7 +169,7 @@ class FeedController {
       <div class="insta-actions-bar">
         <div class="insta-left-actions">
           <button class="btn-insta-action btn-feed-like" title="いいね">
-            <i data-lucide="heart" class="${rec.likes ? 'liked' : ''}"></i>
+            <i data-lucide="heart" class="${(rec.likes || []).includes(currentUserName) ? 'liked fill-liked' : ''}"></i>
           </button>
           <button class="btn-insta-action btn-feed-stamp-trigger" title="スタンプ">
             <i data-lucide="smile"></i>
@@ -181,7 +185,7 @@ class FeedController {
 
       <!-- Likes count -->
       <div class="insta-likes-count">
-        <span>共感 <strong>${rec.likes || 0}</strong> 件</span>
+        <span>共感 <strong>${(rec.likes || []).length}</strong> 件</span>
       </div>
 
       <!-- Post Content & Hashtags -->
@@ -334,7 +338,7 @@ class FeedController {
         <img src="${rec.photoUrl}" alt="写真" class="gallery-tile-img" loading="lazy">
         <div class="gallery-tile-overlay">
           <div class="overlay-stats">
-            <span><i data-lucide="heart"></i> ${rec.likes || 0}</span>
+            <span><i data-lucide="heart"></i> ${(rec.likes || []).length}</span>
             <span><i data-lucide="message-circle"></i> ${(rec.comments || []).length}</span>
           </div>
           <span class="overlay-author">${this.escapeHtml(rec.authorName || '')}</span>

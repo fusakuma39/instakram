@@ -38,7 +38,32 @@ class StorageService {
                   r.photoUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
                 }
               }
+
+              // Normalize likes data (array of user names)
+              if (typeof r.likes === 'number') {
+                r.likes = Array(r.likes).fill('先生');
+              } else if (typeof r.likes === 'string') {
+                r.likes = r.likes ? r.likes.split(',') : [];
+              } else if (!Array.isArray(r.likes)) {
+                r.likes = [];
+              }
             });
+
+            // Extract system config record (Hierarchy)
+            const systemRecIndex = cloudRecords.findIndex(r => r.id === "system_hierarchy_config" && r.className === "_SYSTEM_");
+            if (systemRecIndex !== -1) {
+              const sysRec = cloudRecords[systemRecIndex];
+              try {
+                if (sysRec.comment) {
+                  const cloudHierarchy = JSON.parse(sysRec.comment);
+                  localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(cloudHierarchy));
+                }
+              } catch (e) {
+                console.error("Failed to parse system hierarchy:", e);
+              }
+              // Remove the system record from the visible records
+              cloudRecords.splice(systemRecIndex, 1);
+            }
 
             // 作成日時の降順にソートしてメモリに保持
             this.records = cloudRecords.sort((a, b) => {
@@ -151,36 +176,31 @@ class StorageService {
 
   // GASへ投稿データ全体（写真Base64＋テキスト一式）を送信
   async sendToGas(record) {
-    if (!this.gasUrl) return;
+    if (!this.gasUrl) return true;
+    try {
+      const payload = {
+        action: "save",
+        ...record,
+        likes: Array.isArray(record.likes) ? record.likes.join(',') : record.likes
+      };
 
-    const payload = {
-      id: record.id,
-      authorName: record.authorName,
-      date: record.date,
-      className: record.className,
-      image: record.photoUrl,
-      filename: `${record.date}_${record.className}_${record.id}.jpg`,
-      comment: record.comment,
-      aspects: record.aspects || [],
-      likes: record.likes || 0,
-      comments: record.comments || [],
-      createdAt: record.createdAt,
-      action: "save"
-    };
+      const res = await fetch(this.gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
 
-    const res = await fetch(this.gasUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
+      if (!res.ok) {
+        throw new Error(`GAS request failed: ${res.status}`);
+      }
 
-    if (!res.ok) {
-      throw new Error(`GAS request failed: ${res.status}`);
-    }
-
-    const result = await res.json();
-    if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
-      record.photoUrl = result.photoUrl;
+      const result = await res.json();
+      if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
+        record.photoUrl = result.photoUrl;
+      }
+      return true;
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -220,11 +240,22 @@ class StorageService {
   }
 
   async toggleLike(id) {
-    const record = await this.getRecordById(id);
-    if (!record) return null;
-    record.likes = (record.likes || 0) + 1;
-    await this.saveRecord(record);
-    return record;
+    const rec = this.records.find(r => r.id === id);
+    if (rec) {
+      const currentUser = this.getCurrentUser() || "先生";
+      if (!Array.isArray(rec.likes)) rec.likes = [];
+      const index = rec.likes.indexOf(currentUser);
+      if (index >= 0) {
+        rec.likes.splice(index, 1); // remove like
+      } else {
+        rec.likes.push(currentUser); // add like
+      }
+      
+      // Update memory cache
+      await this.saveRecord(rec);
+      return rec;
+    }
+    return null;
   }
 
   async addReaction(id, emoji) {
@@ -288,6 +319,24 @@ class StorageService {
     a.download = `insta倉m_小学校実践一覧_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // --- GASを使用したクラウド設定同期 (学年・学級) ---
+  async saveSystemHierarchy(hierarchy) {
+    const systemRecord = {
+      id: "system_hierarchy_config",
+      authorName: "SYSTEM",
+      date: "2099-12-31",
+      className: "_SYSTEM_",
+      photoUrl: "",
+      driveUrl: "",
+      comment: JSON.stringify(hierarchy),
+      aspects: [],
+      likes: [],
+      comments: [],
+      createdAt: new Date().toISOString()
+    };
+    return await this.sendToGas(systemRecord);
   }
 }
 

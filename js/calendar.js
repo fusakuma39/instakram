@@ -277,8 +277,8 @@ class CalendarController {
 
         <div class="record-card-footer">
           <div class="record-reactions">
-            <button class="btn-like-action ${rec.likes ? 'has-likes' : ''}" data-id="${rec.id}">
-              <i data-lucide="heart"></i> <span class="like-count">${rec.likes || 0}</span>
+            <button class="btn-like-action ${(rec.likes || []).includes(window.storageService.getCurrentUser() || '先生') ? 'liked fill-liked' : ''}" data-id="${rec.id}">
+              <i data-lucide="heart"></i> <span class="like-count">${(rec.likes || []).length}</span>
             </button>
             <div class="reactions-list">${reactionsHtml}</div>
             <div class="reaction-picker-drop">
@@ -328,8 +328,14 @@ class CalendarController {
     btnLike?.addEventListener("click", async () => {
       const updated = await window.storageService.toggleLike(rec.id);
       if (updated) {
-        btnLike.querySelector(".like-count").textContent = updated.likes;
-        btnLike.classList.add("heart-pulse");
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const hasLiked = (updated.likes || []).includes(currentUserName);
+        btnLike.querySelector(".like-count").textContent = (updated.likes || []).length;
+        if (hasLiked) {
+          btnLike.classList.add("liked", "fill-liked");
+        } else {
+          btnLike.classList.remove("liked", "fill-liked");
+        }
         if (typeof confetti === "function") {
           confetti({ particleCount: 20, spread: 45, origin: { y: 0.8 } });
         }

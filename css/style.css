@@ -2974,3 +2974,17 @@ body {
     font-size: 16px; /* Prevents auto-zoom on iOS */
   }
 }
+
+/* Liked Heart Styles */
+i.liked {
+  color: #E91E63 !important;
+}
+i.fill-liked {
+  fill: currentColor !important;
+}
+.btn-like-action.liked, .btn-like-action.liked i {
+  color: #E91E63 !important;
+}
+.btn-like-action.fill-liked i {
+  fill: currentColor !important;
+}

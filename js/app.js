@@ -1021,13 +1021,36 @@ class EduRecordApp {
       document.body.style.overflow = "";
     });
 
-    this.btnSaveClassesDone?.addEventListener("click", () => {
-      this.classesModal?.classList.add("hidden");
-      document.body.style.overflow = "";
-      this.setupHierarchicalStories();
-      this.setupFormGradeClassOptions();
-      this.refreshAllViews();
-      this.showToast("学年・学級設定を更新しました");
+    this.btnSaveClassesDone?.addEventListener("click", async () => {
+      if (!confirm("この設定で学年・学級を保存し、他の端末とも設定を同期しますか？")) return;
+      
+      const hierarchy = window.storageService.getGradeHierarchy();
+      
+      // ボタンを一時的に無効化
+      if (this.btnSaveClassesDone) {
+        this.btnSaveClassesDone.disabled = true;
+        this.btnSaveClassesDone.innerHTML = `<i data-lucide="loader" class="spin"></i> 保存中...`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      try {
+        await window.storageService.saveSystemHierarchy(hierarchy);
+        this.classesModal?.classList.add("hidden");
+        document.body.style.overflow = "";
+        this.setupHierarchicalStories();
+        this.setupFormGradeClassOptions();
+        this.refreshAllViews();
+        this.showToast("学年・学級設定を保存・同期しました");
+      } catch (e) {
+        alert("同期に失敗しました。通信環境を確認してください。");
+        console.error(e);
+      } finally {
+        if (this.btnSaveClassesDone) {
+          this.btnSaveClassesDone.disabled = false;
+          this.btnSaveClassesDone.innerHTML = `<i data-lucide="save"></i> 保存して閉じる`;
+          if (window.lucide) window.lucide.createIcons();
+        }
+      }
     });
 
     this.manageGradeSelect?.addEventListener("change", () => {

@@ -19,7 +19,7 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -438,6 +438,11 @@
       <div class="lightbox-content">
         <img id="lightboxImg" src="" alt="拡大写真" class="lightbox-full-img">
         <div class="lightbox-caption" id="lightboxCaption"></div>
+        <div style="text-align: center; margin-top: 16px;">
+          <a id="lightboxFullSizeLink" href="#" target="_blank" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.4);">
+            <i data-lucide="external-link"></i> フルサイズで開いて拡大する
+          </a>
+        </div>
       </div>
     </div>
 
@@ -520,7 +525,7 @@
 
           <div class="modal-footer" style="padding: 12px 0 0 0; background: transparent;">
             <button type="button" class="btn btn-secondary btn-sm" id="btnResetDefaultClasses">初期設定に戻す</button>
-            <button type="button" class="btn btn-primary btn-sm" id="btnSaveClassesDone">完了</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnSaveClassesDone"><i data-lucide="save"></i> 保存して閉じる</button>
           </div>
         </div>
       </div>
@@ -540,12 +545,12 @@
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/tenAspects.js?v=8"></script>
-  <script src="js/sampleData.js?v=8"></script>
-  <script src="js/storage.js?v=8"></script>
-  <script src="js/calendar.js?v=8"></script>
-  <script src="js/feed.js?v=8"></script>
-  <script src="js/analytics.js?v=8"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/tenAspects.js?v=9"></script>
+  <script src="js/sampleData.js?v=9"></script>
+  <script src="js/storage.js?v=9"></script>
+  <script src="js/calendar.js?v=9"></script>
+  <script src="js/feed.js?v=9"></script>
+  <script src="js/analytics.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>
