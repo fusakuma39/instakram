@@ -22,10 +22,22 @@ class StorageService {
         if (res.ok) {
           const cloudRecords = await res.json();
           if (Array.isArray(cloudRecords)) {
+            // Google SheetsがDate型として返してISO文字列になった日付を "YYYY-MM-DD" に正規化
+            cloudRecords.forEach(r => {
+              if (r.date && r.date.includes("T")) {
+                const d = new Date(r.date);
+                if (!isNaN(d)) {
+                  r.date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                }
+              }
+            });
+
             // 作成日時の降順にソートしてメモリに保持
             this.records = cloudRecords.sort((a, b) => {
-              const dateA = new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00"));
-              const dateB = new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00"));
+              const timeA = (a.createdAt && a.createdAt.includes("T")) ? a.createdAt.split("T")[1] : "00:00:00";
+              const timeB = (b.createdAt && b.createdAt.includes("T")) ? b.createdAt.split("T")[1] : "00:00:00";
+              const dateA = new Date(a.date + "T" + timeA);
+              const dateB = new Date(b.date + "T" + timeB);
               return dateB - dateA;
             });
           }
