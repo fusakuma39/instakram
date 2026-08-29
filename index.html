@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#2E7D32">
+  <title>insta倉m (インスタクラム) - 小学校実践記録＆学びの可視化</title>
+  <meta name="description" content="小学校での日々の取り組みを写真とともに記録・蓄積し、実践からカリキュラムを構築・共有するWebアプリ">
+  
+  <!-- Fonts: Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="app-layout">
+    
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo" id="btnLogoHome">
+          <div class="logo-icon-wrap">
+            <i data-lucide="sprout" class="logo-leaf"></i>
+            <i data-lucide="camera" class="logo-cam"></i>
+          </div>
+          <span class="logo-text">insta<span class="logo-highlight">倉</span>m</span>
+        </div>
+        <span class="brand-subtitle">小学校実践記録 ✕ 学びの姿</span>
+      </div>
+
+      <div class="header-center">
+        <div class="search-bar">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="searchInput" placeholder="写真のコメント、先生のお名前、学級、#ハッシュタグで検索..." autocomplete="off">
+          <button id="btnClearSearch" class="btn-clear-search hidden"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="btnNewPost" class="btn btn-primary btn-new-post" title="新しい実践を記録">
+          <i data-lucide="plus-circle"></i>
+          <span class="btn-label">記録を追加</span>
+        </button>
+
+        <button id="btnManageClasses" class="btn-icon" title="学年・学級設定">
+          <i data-lucide="sliders"></i>
+        </button>
+
+        <button id="btnPrintSelectorOpen" class="btn-icon" title="実践記録を選択して印刷・おたより作成">
+          <i data-lucide="printer"></i>
+        </button>
+
+        <button id="btnExportData" class="btn-icon" title="データバックアップ・CSV出力">
+          <i data-lucide="download"></i>
+        </button>
+
+        <div class="user-profile-badge" id="btnEditUserName" title="クリックして名前を変更">
+          <div class="avatar-circle">
+            <i data-lucide="user"></i>
+          </div>
+          <span class="user-name" id="displayHeaderUserName">お名前を設定</span>
+          <i data-lucide="edit-2" class="user-edit-icon"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-container">
+      
+      <!-- Hierarchical Story Bar (Grade -> Class) -->
+      <section class="stories-hierarchy-section">
+        <!-- 1. Grade Story Rings (上段: 学年) -->
+        <div class="stories-scroll grade-stories" id="gradeStoriesContainer">
+          <!-- Dynamically filled with grades -->
+        </div>
+
+        <!-- 2. Sub-Class Story Rings (下段: 学年選択時に展開されるクラス一覧) -->
+        <div class="sub-class-bar hidden" id="subClassBar">
+          <div class="sub-class-label">
+            <i data-lucide="corner-down-right"></i>
+            <span id="subClassGradeLabel">1年生の学級:</span>
+          </div>
+          <div class="sub-classes-scroll" id="subClassesContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- View Switcher Tabs -->
+      <nav class="view-tabs-nav">
+        <div class="tabs-wrapper">
+          <button class="tab-btn active" data-view="calendar" id="tabCalendar">
+            <i data-lucide="calendar"></i>
+            <span>カレンダー (振り返り)</span>
+          </button>
+          <button class="tab-btn" data-view="feed" id="tabFeed">
+            <i data-lucide="layout-grid"></i>
+            <span>タイムライン</span>
+          </button>
+          <button class="tab-btn" data-view="gallery" id="tabGallery">
+            <i data-lucide="image"></i>
+            <span>写真グリッド</span>
+          </button>
+          <button class="tab-btn" data-view="analytics" id="tabAnalytics">
+            <i data-lucide="trending-up"></i>
+            <span>学びの蓄積・カリキュラム分析</span>
+          </button>
+        </div>
+
+        <div class="filter-pills-bar" id="activeFilterBar">
+          <span class="filter-label">表示条件:</span>
+          <span class="active-filter-tag" id="currentFilterTag">全校・すべての学年・学級</span>
+          <button class="btn-reset-filter hidden" id="btnResetFilter">解除</button>
+        </div>
+      </nav>
+
+      <!-- Views Container -->
+      <div class="views-viewport">
+        
+        <!-- 1. CALENDAR VIEW (Primary) -->
+        <section id="viewCalendar" class="app-view active">
+          <div class="calendar-layout">
+            
+            <!-- Left: Interactive Calendar -->
+            <div class="calendar-card">
+              <div class="calendar-header">
+                <div class="calendar-title-group">
+                  <h2 id="calendarMonthLabel" class="calendar-month-title">2026年 8月</h2>
+                  <button id="btnToday" class="btn btn-secondary btn-sm">今日</button>
+                </div>
+                <div class="calendar-nav-buttons">
+                  <button id="btnPrevMonth" class="btn-icon btn-sm" title="前月"><i data-lucide="chevron-left"></i></button>
+                  <button id="btnNextMonth" class="btn-icon btn-sm" title="翌月"><i data-lucide="chevron-right"></i></button>
+                </div>
+              </div>
+
+              <!-- Day of week header -->
+              <div class="calendar-weekdays">
+                <div class="weekday sun">日</div>
+                <div class="weekday">月</div>
+                <div class="weekday">火</div>
+                <div class="weekday">水</div>
+                <div class="weekday">木</div>
+                <div class="weekday">金</div>
+                <div class="weekday sat">土</div>
+              </div>
+
+              <!-- Days grid -->
+              <div class="calendar-grid" id="calendarDaysGrid">
+                <!-- Dynamically generated days -->
+              </div>
+
+              <!-- Calendar Legend -->
+              <div class="calendar-legend">
+                <div class="legend-item"><span class="legend-dot record-dot"></span> 実践記録あり</div>
+                <div class="legend-hint">※日付をタップすると右側にその日の記録が展開されます</div>
+              </div>
+            </div>
+
+            <!-- Right: Selected Day Timeline / Records Detail -->
+            <div class="day-detail-panel" id="dayDetailPanel">
+              <div class="panel-header">
+                <div class="panel-date-info">
+                  <div class="date-badge" id="selectedDateBadge">8/29</div>
+                  <div>
+                    <h3 id="selectedDateHeading" class="panel-title">2026年8月29日の実践記録</h3>
+                    <p class="panel-subtitle" id="selectedDateSub">0件の記録</p>
+                  </div>
+                </div>
+                <button id="btnAddRecordForDate" class="btn btn-secondary btn-sm">
+                  <i data-lucide="plus"></i> この日に記録
+                </button>
+              </div>
+
+              <!-- Day Records List -->
+              <div class="day-records-list" id="dayRecordsList">
+                <!-- Dynamically rendered day cards -->
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 2. FEED VIEW (Instagram Timeline Style) -->
+        <section id="viewFeed" class="app-view">
+          <div class="feed-container" id="feedContainer">
+            <!-- Dynamically rendered feed posts -->
+          </div>
+        </section>
+
+        <!-- 3. GALLERY GRID VIEW (Instagram Profile Grid Style) -->
+        <section id="viewGallery" class="app-view">
+          <div class="gallery-grid" id="galleryGrid">
+            <!-- Dynamically rendered photo tiles -->
+          </div>
+        </section>
+
+        <!-- 4. ANALYTICS VIEW (実践ストック型カリキュラム分析) -->
+        <section id="viewAnalytics" class="app-view">
+          <div class="analytics-dashboard">
+            
+            <!-- Stock Summary Header Card -->
+            <div class="analytics-stock-header-card">
+              <div class="stock-overview-left">
+                <div class="stock-badge-icon"><i data-lucide="layers"></i></div>
+                <div>
+                  <h2 class="stock-main-title">学びの実践ストック＆成長蓄積</h2>
+                  <p class="stock-subtitle">子どもたちの育ちや日々の探究がどれだけ豊かに蓄積されているかを可視化します。</p>
+                </div>
+              </div>
+
+              <div class="stock-metrics-group">
+                <div class="metric-card total-stock">
+                  <span class="metric-num" id="totalStockCount">0</span>
+                  <span class="metric-label">累計実践ストック</span>
+                </div>
+                <div class="metric-card active-aspects">
+                  <span class="metric-num" id="activeAspectsCount">0/10</span>
+                  <span class="metric-label">育まれた姿の種類</span>
+                </div>
+                <button id="btnOpenPrintFromAnalytics" class="btn btn-secondary btn-sm">
+                  <i data-lucide="printer"></i> 記録を選択して印刷
+                </button>
+              </div>
+            </div>
+
+            <!-- 10 Aspects Stock Progress List -->
+            <div class="aspects-stock-grid" id="aspectsStockGrid">
+              <!-- Dynamically filled with stackable stock cards -->
+            </div>
+
+            <!-- Curriculum Insights Card -->
+            <div class="curriculum-insights-card">
+              <h3 class="insights-title"><i data-lucide="sparkles"></i> 実践の蓄積から見えてきたカリキュラムの特長</h3>
+              <div class="insights-content" id="insightsContent">
+                <!-- Dynamic suggestions -->
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Floating Action Button for Tablet / Mobile -->
+    <button class="fab-new-post" id="fabNewPost" title="新しい実践を記録">
+      <i data-lucide="plus"></i>
+    </button>
+
+    <!-- Mobile Bottom Navigation Bar (Instagram Style) -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+      <button class="mobile-nav-item active" data-view="calendar" id="mobileNavCalendar">
+        <i data-lucide="calendar"></i>
+        <span>カレンダー</span>
+      </button>
+      <button class="mobile-nav-item" data-view="feed" id="mobileNavFeed">
+        <i data-lucide="layout-grid"></i>
+        <span>タイムライン</span>
+      </button>
+      <button class="mobile-nav-item mobile-nav-post-btn" id="mobileNavPost" title="投稿する">
+        <div class="mobile-plus-circle">
+          <i data-lucide="plus"></i>
+        </div>
+      </button>
+      <button class="mobile-nav-item" data-view="gallery" id="mobileNavGallery">
+        <i data-lucide="image"></i>
+        <span>写真</span>
+      </button>
+      <button class="mobile-nav-item" data-view="analytics" id="mobileNavAnalytics">
+        <i data-lucide="trending-up"></i>
+        <span>学びの姿</span>
+      </button>
+    </nav>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- 0. Welcome & User Name Input Modal (初回訪問時) -->
+    <div class="modal-overlay hidden" id="welcomeModal">
+      <div class="modal-card modal-welcome">
+        <div class="welcome-header">
+          <div class="welcome-icon-wrap">
+            <i data-lucide="sprout"></i>
+          </div>
+          <h3 class="welcome-title">insta<span class="logo-highlight">倉</span>m へようこそ！</h3>
+          <p class="welcome-subtitle">投稿やコメント欄に表示する先生のお名前を入力してください。</p>
+        </div>
+
+        <form id="userNameForm" class="welcome-form">
+          <div class="form-group">
+            <label for="inputUserName" class="form-label">
+              <i data-lucide="user"></i> お名前・担当（例: 佐藤先生、3年1組 担任、理科専科 など）
+            </label>
+            <input type="text" id="inputUserName" class="form-input" placeholder="例: 佐藤 健一 先生" required autofocus>
+          </div>
+
+          <div class="welcome-footer">
+            <button type="submit" class="btn btn-primary btn-welcome-submit">
+              利用を開始する <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 1. Post Creation & Edit Modal -->
+    <div class="modal-overlay hidden" id="postModal">
+      <div class="modal-card modal-post">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge"><i data-lucide="camera"></i></div>
+            <h3 class="modal-title" id="postModalTitle">実践記録の投稿</h3>
+          </div>
+          <button class="modal-close" id="btnClosePostModal"><i data-lucide="x"></i></button>
+        </div>
+
+        <form id="recordForm" class="record-form">
+          <input type="hidden" id="recordId" value="">
+          
+          <div class="form-body-split">
+            <!-- Left: Photo Upload & Preview -->
+            <div class="form-photo-column">
+              <div class="photo-upload-zone" id="photoDropZone">
+                <input type="file" id="photoFileInput" accept="image/*" class="file-input-hidden">
+                <div class="upload-placeholder" id="uploadPlaceholder">
+                  <div class="upload-icon-circle"><i data-lucide="image-plus"></i></div>
+                  <p class="upload-main-text">写真をドラッグ＆ドロップ</p>
+                  <p class="upload-sub-text">またはクリックしてファイル選択 / 撮影</p>
+                  <p class="upload-hint-aspect">※横長・縦長などどんな比率の写真も自動で最適化されます</p>
+                </div>
+                <div class="preview-container hidden" id="previewContainer">
+                  <img id="photoPreviewImg" src="" alt="プレビュー" class="preview-image">
+                  <button type="button" class="btn-remove-photo" id="btnRemovePhoto" title="写真を変更">
+                    <i data-lucide="refresh-cw"></i> 変更
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Details Input -->
+            <div class="form-details-column">
+              
+              <!-- Author, Date Row -->
+              <div class="form-row-author-date">
+                <div class="form-group">
+                  <label for="recordAuthor" class="form-label">
+                    <i data-lucide="user"></i> 投稿者
+                  </label>
+                  <input type="text" id="recordAuthor" required class="form-input" placeholder="先生のお名前">
+                </div>
+
+                <div class="form-group">
+                  <label for="recordDate" class="form-label">
+                    <i data-lucide="calendar"></i> 実施日付 <span class="required-star">*</span>
+                  </label>
+                  <input type="date" id="recordDate" required class="form-input">
+                </div>
+              </div>
+
+              <!-- Grade and Class Hierarchical Selectors -->
+              <div class="form-row-grade-class">
+                <div class="form-group">
+                  <label for="recordGradeSelect" class="form-label">
+                    <i data-lucide="bookmark"></i> 学年 <span class="required-star">*</span>
+                  </label>
+                  <select id="recordGradeSelect" required class="form-select">
+                    <!-- Dynamically populated with grades -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="recordClassSelect" class="form-label">
+                    <i data-lucide="users"></i> 学級・クラス <span class="required-star">*</span>
+                  </label>
+                  <select id="recordClassSelect" required class="form-select">
+                    <!-- Dynamically populated -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Comment Input -->
+              <div class="form-group">
+                <label for="recordComment" class="form-label">
+                  <i data-lucide="message-square"></i> 一言コメント・児童の姿・つぶやき <span class="required-star">*</span>
+                </label>
+                <textarea id="recordComment" rows="3" class="form-textarea" placeholder="児童の夢中になっていた場面、つぶやき、気づきや学び合いの様子を記録..." required></textarea>
+              </div>
+
+              <!-- 10 Aspects Selection (Hashtag style, optional) -->
+              <div class="form-group">
+                <div class="label-with-hint">
+                  <label class="form-label">
+                    <i data-lucide="hash"></i> 学びの姿ハッシュタグ <span class="badge-optional">(任意選択・複数可)</span>
+                  </label>
+                  <span class="selection-counter" id="aspectSelectionCounter">0個選択中</span>
+                </div>
+                <div class="ten-aspects-chips" id="tenAspectsChipsContainer">
+                  <!-- Dynamically rendered hashtag chips -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Form Footer (紙飛行機マークに「投稿する」) -->
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btnCancelPost">キャンセル</button>
+            <button type="submit" class="btn btn-primary btn-save-post" id="btnSubmitPost">
+              <i data-lucide="send"></i> 投稿する
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. Record Detail Modal -->
+    <div class="modal-overlay hidden" id="detailModal">
+      <div class="modal-card modal-detail">
+        <button class="modal-close detail-modal-close" id="btnCloseDetailModal"><i data-lucide="x"></i></button>
+        <div class="detail-modal-body" id="detailModalBody">
+          <!-- Dynamically filled -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Photo Lightbox Modal (フルスクリーン拡大) -->
+    <div class="lightbox-overlay hidden" id="lightboxModal">
+      <button class="lightbox-close" id="btnCloseLightbox"><i data-lucide="x"></i></button>
+      <div class="lightbox-content">
+        <img id="lightboxImg" src="" alt="拡大写真" class="lightbox-full-img">
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+      </div>
+    </div>
+
+    <!-- 4. Print Record Selection Modal (印刷する投稿の選択) -->
+    <div class="modal-overlay hidden" id="printSelectModal">
+      <div class="modal-card modal-print-select">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge"><i data-lucide="printer"></i></div>
+            <h3 class="modal-title">印刷する実践記録の選択</h3>
+          </div>
+          <button class="modal-close" id="btnClosePrintSelectModal"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="print-select-toolbar">
+          <div class="print-filter-dropdowns">
+            <div class="print-filter-group">
+              <label for="printFilterGradeSelect" class="print-filter-label"><i data-lucide="bookmark"></i> 学年:</label>
+              <select id="printFilterGradeSelect" class="form-select print-filter-select">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div class="print-filter-group">
+              <label for="printFilterClassSelect" class="print-filter-label"><i data-lucide="users"></i> 学級:</label>
+              <select id="printFilterClassSelect" class="form-select print-filter-select">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+
+          <div class="select-actions-left">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnSelectAllPrint">すべて選択</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnDeselectAllPrint">選択解除</button>
+            <span class="selected-print-counter" id="selectedPrintCounter">0 件選択中</span>
+          </div>
+        </div>
+
+        <div class="print-select-items-container" id="printSelectItemsContainer">
+          <!-- Dynamically populated with selectable post cards -->
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelPrintSelect">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="btnExecuteSelectedPrint">
+            <i data-lucide="printer"></i> 選択した記録を印刷する
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Class Management Modal (階層型 学年・学級設定) -->
+    <div class="modal-overlay hidden" id="classesModal">
+      <div class="modal-card modal-settings modal-classes-hierarchy">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge"><i data-lucide="sliders"></i></div>
+            <h3 class="modal-title">学年・学級（クラス）の設定</h3>
+          </div>
+          <button class="modal-close" id="btnCloseClassesModal"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <p class="gcs-info-text" style="color: var(--text-secondary); margin-bottom: 12px;">
+            各学年を選択して、所属するクラス（1組・2組など）を追加・削除できます。
+          </p>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label"><i data-lucide="bookmark"></i> 編集する学年を選択</label>
+            <select id="manageGradeSelect" class="form-select">
+              <!-- Dynamically filled -->
+            </select>
+          </div>
+
+          <form id="addClassForm" class="add-class-row">
+            <input type="text" id="newClassNameInput" class="form-input" placeholder="例: 1年4組、ひまわり組" required>
+            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="plus"></i> クラス追加</button>
+          </form>
+
+          <div class="classes-list-container" id="classesListContainer"></div>
+
+          <div class="modal-footer" style="padding: 12px 0 0 0; background: transparent;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnResetDefaultClasses">初期設定に戻す</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnSaveClassesDone">完了</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast-notification hidden">
+      <div class="toast-icon" id="toastIcon"><i data-lucide="check-circle"></i></div>
+      <span class="toast-message" id="toastMessage">保存しました</span>
+    </div>
+
+    <!-- Hidden Print Container (印刷実行時にのみレンダリングされて印刷対象となる領域) -->
+    <div id="printOutputContainer" class="print-output-container hidden">
+      <!-- Dynamically filled with selected cards for print -->
+    </div>
+
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/tenAspects.js"></script>
+  <script src="js/sampleData.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/feed.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
