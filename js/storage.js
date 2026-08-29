@@ -8,7 +8,7 @@ class StorageService {
     this.gradeHierarchyKey = "instaKuram_grade_hierarchy";
     
     // GAS Web AppエンドポイントURL
-    this.gasUrl = "https://script.google.com/a/macros/edu.city.yokohama.jp/s/AKfycbwxXPm0aEbwGkSqrBW1mA9_rsowwsGG31zI8dANeGwdjXVDyCVJyWae4O4yJrVDN3Bt/exec";
+    this.gasUrl = "https://script.google.com/macros/s/AKfycbwhuqZlEyHPRlcslldS_SSLvsMLZ7E3xHxybbwVuYnsUPpAf8iJGGcstO5yIlmGDnAx/exec";
 
     // メモリ上のレコードキャッシュ
     this.records = [];
