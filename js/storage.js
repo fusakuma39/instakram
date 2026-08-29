@@ -16,73 +16,88 @@ class StorageService {
 
   // 初期化 (GASからデータ取得)
   async init() {
+    // 1. ローカルキャッシュからの高速起動
     try {
-      if (this.gasUrl) {
-        const res = await fetch(this.gasUrl, { method: "GET" });
-        if (res.ok) {
-          const cloudRecords = await res.json();
-          if (Array.isArray(cloudRecords)) {
-            // Google SheetsがDate型として返してISO文字列になった日付を "YYYY-MM-DD" に正規化
-            cloudRecords.forEach(r => {
-              if (r.date && r.date.includes("T")) {
-                const d = new Date(r.date);
-                if (!isNaN(d)) {
-                  r.date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                }
-              }
+      const cached = localStorage.getItem("insta_records_cache");
+      if (cached) {
+        this.records = JSON.parse(cached);
+      }
+    } catch (e) {
+      console.warn("Failed to load cache", e);
+    }
 
-              // Google Driveの画像を埋め込み用(thumbnail)URLに変換 (Cookieブロック回避)
-              if (r.photoUrl && r.photoUrl.includes("drive.google.com")) {
-                const match = r.photoUrl.match(/id=([a-zA-Z0-9_-]+)/);
-                if (match) {
-                  r.photoUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
-                }
-              }
+    // 2. バックグラウンドで最新データをGASから取得
+    this.fetchFromCloudBackground();
+    
+    return true;
+  }
 
-              // Normalize likes data (array of user names)
-              if (typeof r.likes === 'number') {
-                r.likes = Array(r.likes).fill('先生');
-              } else if (typeof r.likes === 'string') {
-                r.likes = r.likes ? r.likes.split(',') : [];
-              } else if (!Array.isArray(r.likes)) {
-                r.likes = [];
-              }
-            });
-
-            // Extract system config record (Hierarchy)
-            const systemRecIndex = cloudRecords.findIndex(r => r.id === "system_hierarchy_config" && r.className === "_SYSTEM_");
-            if (systemRecIndex !== -1) {
-              const sysRec = cloudRecords[systemRecIndex];
-              try {
-                if (sysRec.comment) {
-                  const cloudHierarchy = JSON.parse(sysRec.comment);
-                  localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(cloudHierarchy));
-                }
-              } catch (e) {
-                console.error("Failed to parse system hierarchy:", e);
-              }
-              // Remove the system record from the visible records
-              cloudRecords.splice(systemRecIndex, 1);
-            }
-
-            // 作成日時の降順にソートしてメモリに保持
-            this.records = cloudRecords.sort((a, b) => {
-              const timeA = (a.createdAt && a.createdAt.includes("T")) ? a.createdAt.split("T")[1] : "00:00:00";
-              const timeB = (b.createdAt && b.createdAt.includes("T")) ? b.createdAt.split("T")[1] : "00:00:00";
-              const dateA = new Date(a.date + "T" + timeA);
-              const dateB = new Date(b.date + "T" + timeB);
-              return dateB - dateA;
-            });
-          }
+  async fetchFromCloudBackground() {
+    try {
+      if (!this.gasUrl) return;
+      const res = await fetch(this.gasUrl, { method: "GET" });
+      if (res.ok) {
+        const cloudRecords = await res.json();
+        if (Array.isArray(cloudRecords)) {
+          this.processCloudRecords(cloudRecords);
+          localStorage.setItem("insta_records_cache", JSON.stringify(this.records));
+          // UI更新を通知
+          document.dispatchEvent(new CustomEvent('instaDataUpdated'));
         }
       }
     } catch (err) {
-      console.error("Cloud sync initial error:", err);
-      // エラー時はサンプルデータを自動で読み込まないように変更
-      // if (typeof SAMPLE_RECORDS !== "undefined" && this.records.length === 0) {
-      //   this.records = [...SAMPLE_RECORDS];
-      // }
+      console.error("Cloud sync background error:", err);
     }
+  }
+
+  processCloudRecords(cloudRecords) {
+    cloudRecords.forEach(r => {
+      if (r.date && r.date.includes("T")) {
+        const d = new Date(r.date);
+        if (!isNaN(d)) {
+          r.date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
+      }
+
+      if (r.photoUrl && r.photoUrl.includes("drive.google.com")) {
+        const urls = r.photoUrl.split(',');
+        r.photoUrl = urls.map(url => {
+          const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+          if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+          return url;
+        }).join(',');
+      }
+
+      if (typeof r.likes === 'number') {
+        r.likes = Array(r.likes).fill('先生');
+      } else if (typeof r.likes === 'string') {
+        r.likes = r.likes ? r.likes.split(',') : [];
+      } else if (!Array.isArray(r.likes)) {
+        r.likes = [];
+      }
+    });
+
+    const systemRecIndex = cloudRecords.findIndex(r => r.id === "system_hierarchy_config" && r.className === "_SYSTEM_");
+    if (systemRecIndex !== -1) {
+      const sysRec = cloudRecords[systemRecIndex];
+      try {
+        if (sysRec.comment) {
+          const cloudHierarchy = JSON.parse(sysRec.comment);
+          localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(cloudHierarchy));
+        }
+      } catch (e) {
+        console.error("Failed to parse system hierarchy:", e);
+      }
+      cloudRecords.splice(systemRecIndex, 1);
+    }
+
+    this.records = cloudRecords.sort((a, b) => {
+      const timeA = (a.createdAt && a.createdAt.includes("T")) ? a.createdAt.split("T")[1] : "00:00:00";
+      const timeB = (b.createdAt && b.createdAt.includes("T")) ? b.createdAt.split("T")[1] : "00:00:00";
+      const dateA = new Date(a.date + "T" + timeA);
+      const dateB = new Date(b.date + "T" + timeB);
+      return dateB - dateA;
+    });
   }
 
   // ユーザー名 (sessionStorageを使用)
@@ -196,7 +211,16 @@ class StorageService {
 
       const result = await res.json();
       if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
-        record.photoUrl = result.photoUrl;
+        let newPhotoUrl = result.photoUrl;
+        if (newPhotoUrl.includes("drive.google.com")) {
+          const urls = newPhotoUrl.split(',');
+          newPhotoUrl = urls.map(url => {
+            const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+            return url;
+          }).join(',');
+        }
+        record.photoUrl = newPhotoUrl;
       }
       return true;
     } catch (e) {

@@ -159,8 +159,12 @@ class FeedController {
       </div>
 
       <!-- Post Photo: Natural Aspect Ratio with Lightbox Click & Double-Tap Heart -->
-      <div class="insta-photo-box natural-aspect" title="クリックで拡大表示">
-        <img src="${rec.photoUrl}" alt="実践写真" class="insta-photo-img natural-fit" loading="lazy">
+      <div class="insta-photo-box natural-aspect" title="横スクロールで複数枚表示（右下クリックで拡大）">
+        <div class="insta-carousel">
+          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
+            <img src="${url}" alt="実践写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+          `).join('')}
+        </div>
         <div class="heart-overlay-anim hidden"><i data-lucide="heart"></i></div>
         <button class="btn-fullscreen-trigger" title="全画面表示"><i data-lucide="maximize-2"></i></button>
       </div>
@@ -222,7 +226,8 @@ class FeedController {
     let lastTap = 0;
     photoBox.addEventListener("click", async (e) => {
       if (e.target.closest(".btn-fullscreen-trigger")) {
-        this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`);
+        const firstPhoto = rec.photoUrl ? rec.photoUrl.split(',')[0] : "";
+        this.openLightbox(firstPhoto, `${rec.className} (${rec.date}) - ${rec.comment}`);
         return;
       }
 
@@ -390,8 +395,12 @@ class FeedController {
     }
 
     this.detailModalBody.innerHTML = `
-      <div class="detail-left-media" title="クリックでフルスクリーン表示">
-        <img src="${rec.photoUrl}" alt="実践写真" class="detail-full-photo">
+      <div class="detail-left-media" title="横スクロールで複数枚表示（クリックで拡大）">
+        <div class="insta-carousel">
+          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
+            <img src="${url}" alt="実践写真" class="detail-full-photo insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+          `).join('')}
+        </div>
       </div>
       <div class="detail-right-content">
         <div class="detail-content-header">
@@ -434,7 +443,8 @@ class FeedController {
 
     // 写真クリックでライトボックス
     this.detailModalBody.querySelector(".detail-left-media")?.addEventListener("click", () => {
-      this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`);
+      const firstPhoto = rec.photoUrl ? rec.photoUrl.split(',')[0] : "";
+      this.openLightbox(firstPhoto, `${rec.className} (${rec.date}) - ${rec.comment}`);
     });
 
     const modalCommentForm = this.detailModalBody.querySelector("#modalAddCommentForm");

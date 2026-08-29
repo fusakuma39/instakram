@@ -119,7 +119,7 @@ class CalendarController {
         const latestRec = dayRecords[0];
         thumbHtml = `
           <div class="calendar-day-thumb">
-            <img src="${latestRec.photoUrl}" alt="サムネイル" loading="lazy">
+            <img src="${latestRec.photoUrl ? latestRec.photoUrl.split(',')[0] : ''}" alt="サムネイル" loading="lazy">
             <span class="record-count-badge">${dayRecords.length}</span>
           </div>
         `;

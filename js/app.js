@@ -54,7 +54,7 @@ class EduRecordApp {
     this.photoDropZone = document.getElementById("photoDropZone");
     this.uploadPlaceholder = document.getElementById("uploadPlaceholder");
     this.previewContainer = document.getElementById("previewContainer");
-    this.photoPreviewImg = document.getElementById("photoPreviewImg");
+    this.previewImagesWrapper = document.getElementById("previewImagesWrapper");
     this.btnRemovePhoto = document.getElementById("btnRemovePhoto");
     this.tenAspectsChipsContainer = document.getElementById("tenAspectsChipsContainer");
     this.aspectSelectionCounter = document.getElementById("aspectSelectionCounter");
@@ -102,6 +102,10 @@ class EduRecordApp {
 
   async init() {
     await window.storageService.init();
+
+    document.addEventListener('instaDataUpdated', () => {
+      this.refreshAllViews();
+    });
 
     this.calendarCtrl = new CalendarController(this);
     this.feedCtrl = new FeedController(this);
@@ -547,8 +551,9 @@ class EduRecordApp {
     });
 
     this.photoFileInput?.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) this.handleImageFile(file);
+      if (e.target.files && e.target.files.length > 0) {
+        this.handleImageFiles(e.target.files);
+      }
     });
 
     this.photoDropZone?.addEventListener("dragover", (e) => {
@@ -563,8 +568,8 @@ class EduRecordApp {
     this.photoDropZone?.addEventListener("drop", (e) => {
       e.preventDefault();
       this.photoDropZone.classList.remove("drag-over");
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        this.handleImageFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        this.handleImageFiles(e.dataTransfer.files);
       }
     });
 
@@ -579,52 +584,57 @@ class EduRecordApp {
     });
   }
 
-  handleImageFile(file) {
-    if (!file.type.startsWith("image/")) {
+  handleImageFiles(files) {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith("image/")).slice(0, 6);
+    if (validFiles.length === 0) {
       alert("画像ファイル（JPG, PNG, HEIC等）を選択してください。");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_SIDE = 1000;
-        let width = img.width;
-        let height = img.height;
+    this.currentPhotosData = [];
+    this.previewImagesWrapper.innerHTML = "";
+    this.uploadPlaceholder.classList.add("hidden");
+    this.previewContainer.classList.remove("hidden");
 
-        if (width > height) {
-          if (width > MAX_SIDE) {
-            height *= MAX_SIDE / width;
-            width = MAX_SIDE;
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIDE = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIDE) { height *= MAX_SIDE / width; width = MAX_SIDE; }
+          } else {
+            if (height > MAX_SIDE) { width *= MAX_SIDE / height; height = MAX_SIDE; }
           }
-        } else {
-          if (height > MAX_SIDE) {
-            width *= MAX_SIDE / height;
-            height = MAX_SIDE;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
 
-        this.currentPhotoData = canvas.toDataURL("image/jpeg", 0.75);
-        this.photoPreviewImg.src = this.currentPhotoData;
-        this.uploadPlaceholder.classList.add("hidden");
-        this.previewContainer.classList.remove("hidden");
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+          this.currentPhotosData.push(dataUrl);
+
+          const imgEl = document.createElement("img");
+          imgEl.src = dataUrl;
+          imgEl.className = "preview-image";
+          this.previewImagesWrapper.appendChild(imgEl);
+        };
+        img.src = e.target.result;
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
   }
 
   clearPhoto() {
-    this.currentPhotoData = "";
+    this.currentPhotosData = [];
     if (this.photoFileInput) this.photoFileInput.value = "";
-    this.photoPreviewImg.src = "";
+    if (this.previewImagesWrapper) this.previewImagesWrapper.innerHTML = "";
     this.previewContainer.classList.add("hidden");
     this.uploadPlaceholder.classList.remove("hidden");
   }
@@ -672,8 +682,14 @@ class EduRecordApp {
       this.updateFormClassOptions(matchedGrade.gradeId, rec.className);
     }
 
-    this.currentPhotoData = rec.photoUrl;
-    this.photoPreviewImg.src = rec.photoUrl;
+    this.currentPhotosData = rec.photoUrl ? rec.photoUrl.split(',') : [];
+    this.previewImagesWrapper.innerHTML = "";
+    this.currentPhotosData.forEach(url => {
+      const imgEl = document.createElement("img");
+      imgEl.src = url;
+      imgEl.className = "preview-image";
+      this.previewImagesWrapper.appendChild(imgEl);
+    });
     this.uploadPlaceholder.classList.add("hidden");
     this.previewContainer.classList.remove("hidden");
 
@@ -699,8 +715,8 @@ class EduRecordApp {
   }
 
   async savePostRecord() {
-    if (!this.currentPhotoData) {
-      alert("授業や活動の写真を1枚アップロードしてください。");
+    if (!this.currentPhotosData || this.currentPhotosData.length === 0) {
+      alert("授業や活動の写真を1枚以上アップロードしてください。");
       return;
     }
 
@@ -712,14 +728,16 @@ class EduRecordApp {
     if (author) window.storageService.setCurrentUser(author);
     this.updateHeaderUserName(author);
 
-    // Google Drive (GAS) へバックグラウンドアップロード (storage.js内で一括送信に変更)
-    
+    const base64Images = this.currentPhotosData.filter(url => url.startsWith("data:image/"));
+    const existingUrls = this.currentPhotosData.filter(url => !url.startsWith("data:image/"));
+
     const recordData = {
       id: recordId,
       authorName: author,
       date: this.recordDateInput.value,
       className: selectedClass,
-      photoUrl: this.currentPhotoData,
+      photoUrl: existingUrls.join(','),
+      images: base64Images,
       driveUrl: "",
       comment: this.recordCommentInput.value,
       aspects: Array.from(this.selectedAspectIds),
@@ -980,7 +998,7 @@ class EduRecordApp {
           return `
             <div class="print-record-card">
               <div class="print-card-img-wrap">
-                <img src="${r.photoUrl}" alt="実践写真" class="print-card-img">
+                <img src="${r.photoUrl ? r.photoUrl.split(',')[0] : ''}" alt="実践写真" class="print-card-img">
               </div>
               <div class="print-card-body">
                 <div class="print-card-top-row">
