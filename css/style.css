@@ -2781,6 +2781,14 @@ body {
   .app-header {
     padding: 8px 12px;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+  .header-left {
+    order: 1;
+  }
+  .header-right {
+    order: 2;
+    margin-left: auto;
   }
   .brand-subtitle, .user-name, .btn-new-post {
     display: none !important;
@@ -2789,8 +2797,10 @@ body {
     font-size: 1.3rem;
   }
   .header-center {
+    order: 3;
+    flex: 1 1 100%;
     max-width: none;
-    flex: 1;
+    margin-top: 4px;
   }
   .search-bar {
     padding: 5px 12px;
