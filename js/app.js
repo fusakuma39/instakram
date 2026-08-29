@@ -712,17 +712,15 @@ class EduRecordApp {
     if (author) window.storageService.setCurrentUser(author);
     this.updateHeaderUserName(author);
 
-    // Google Drive (GAS) へバックグラウンドアップロード
-    const filename = `${this.recordDateInput.value}_${selectedClass}_${recordId}.jpg`;
-    const driveResult = await window.storageService.uploadToGoogleDrive(this.currentPhotoData, filename);
-
+    // Google Drive (GAS) へバックグラウンドアップロード (storage.js内で一括送信に変更)
+    
     const recordData = {
       id: recordId,
       authorName: author,
       date: this.recordDateInput.value,
       className: selectedClass,
-      photoUrl: driveResult.photoUrl || this.currentPhotoData,
-      driveUrl: driveResult.driveUrl || "",
+      photoUrl: this.currentPhotoData,
+      driveUrl: "",
       comment: this.recordCommentInput.value,
       aspects: Array.from(this.selectedAspectIds),
       syncedDrive: true

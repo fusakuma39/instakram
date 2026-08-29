@@ -33,10 +33,10 @@ class StorageService {
       }
     } catch (err) {
       console.error("Cloud sync initial error:", err);
-      // エラー時はサンプルデータ(あれば)をロード
-      if (typeof SAMPLE_RECORDS !== "undefined" && this.records.length === 0) {
-        this.records = [...SAMPLE_RECORDS];
-      }
+      // エラー時はサンプルデータを自動で読み込まないように変更
+      // if (typeof SAMPLE_RECORDS !== "undefined" && this.records.length === 0) {
+      //   this.records = [...SAMPLE_RECORDS];
+      // }
     }
   }
 
@@ -103,29 +103,27 @@ class StorageService {
     }
     record.updatedAt = new Date().toISOString();
 
-    // 1. GASに送信 (非同期ではなく待機する)
+    // 1. GASに送信 (非同期ではなく待機する。失敗してもローカルメモリには保存する)
     try {
       await this.sendToGas(record);
-      
-      // 2. 成功したらメモリのレコードを更新
-      const index = this.records.findIndex(r => r.id === record.id);
-      if (index >= 0) {
-        this.records[index] = record;
-      } else {
-        this.records.unshift(record); // 先頭に追加
-      }
-
-      // 降順ソート維持
-      this.records.sort((a, b) => {
-        const dateA = new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00"));
-        const dateB = new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00"));
-        return dateB - dateA;
-      });
-
     } catch (err) {
-      console.error("Failed to save to GAS:", err);
-      throw err;
+      console.warn("GASへの保存に失敗しましたが、ローカルには保存します:", err);
     }
+      
+    // 2. メモリのレコードを更新
+    const index = this.records.findIndex(r => r.id === record.id);
+    if (index >= 0) {
+      this.records[index] = record;
+    } else {
+      this.records.unshift(record); // 先頭に追加
+    }
+
+    // 降順ソート維持
+    this.records.sort((a, b) => {
+      const dateA = new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00"));
+      const dateB = new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00"));
+      return dateB - dateA;
+    });
 
     return record;
   }
