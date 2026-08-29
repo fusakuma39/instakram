@@ -1,102 +1,67 @@
 /**
  * 完全クラウド同期対応 ストレージサービス (Google Apps Script / Drive / Spreadsheet)
+ * ローカルストレージ(IndexedDB, localStorage)を廃止し、sessionStorageとメモリで状態管理を行います。
  */
 class StorageService {
   constructor() {
-    this.dbName = "EduRecordDB_Elementary";
-    this.dbVersion = 1;
-    this.db = null;
     this.userNameKey = "instaKuram_current_user";
     this.gradeHierarchyKey = "instaKuram_grade_hierarchy";
     
-    // ユーザー様から提供されたGAS Web AppエンドポイントURL
+    // GAS Web AppエンドポイントURL
     this.gasUrl = "https://script.google.com/a/macros/edu.city.yokohama.jp/s/AKfycbwxXPm0aEbwGkSqrBW1mA9_rsowwsGG31zI8dANeGwdjXVDyCVJyWae4O4yJrVDN3Bt/exec";
+
+    // メモリ上のレコードキャッシュ
+    this.records = [];
   }
 
-  // IndexedDBの初期化 & クラウドからの自動同期
+  // 初期化 (GASからデータ取得)
   async init() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains("records")) {
-          const store = db.createObjectStore("records", { keyPath: "id" });
-          store.createIndex("date", "date", { unique: false });
-          store.createIndex("className", "className", { unique: false });
-          store.createIndex("createdAt", "createdAt", { unique: false });
-        }
-      };
-
-      request.onsuccess = async (event) => {
-        this.db = event.target.result;
-        
-        // 1. 初回サンプルデータの投入（空の場合）
-        const count = await this.countRecords();
-        if (count === 0 && typeof SAMPLE_RECORDS !== "undefined") {
-          for (const sample of SAMPLE_RECORDS) {
-            await this.saveRecordLocal(sample);
-          }
-        }
-
-        // 2. クラウド（GAS）から最新データを非同期で取得して同期
-        this.syncFromCloud().catch(err => console.warn("Cloud sync initial error:", err));
-
-        resolve(this.db);
-      };
-
-      request.onerror = (event) => {
-        console.error("IndexedDB open error:", event.target.error);
-        reject(event.target.error);
-      };
-    });
-  }
-
-  // クラウド（GAS）から全端末の投稿データを取得して端末内DBにマージ
-  async syncFromCloud() {
-    if (!this.gasUrl) return;
     try {
-      const res = await fetch(this.gasUrl, { method: "GET" });
-      if (res.ok) {
-        const cloudRecords = await res.json();
-        if (Array.isArray(cloudRecords) && cloudRecords.length > 0) {
-          for (const rec of cloudRecords) {
-            if (rec && rec.id) {
-              await this.saveRecordLocal(rec);
-            }
-          }
-          if (window.app && typeof window.app.refreshAllViews === "function") {
-            window.app.refreshAllViews();
+      if (this.gasUrl) {
+        const res = await fetch(this.gasUrl, { method: "GET" });
+        if (res.ok) {
+          const cloudRecords = await res.json();
+          if (Array.isArray(cloudRecords)) {
+            // 作成日時の降順にソートしてメモリに保持
+            this.records = cloudRecords.sort((a, b) => {
+              const dateA = new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00"));
+              const dateB = new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00"));
+              return dateB - dateA;
+            });
           }
         }
       }
-    } catch (e) {
-      console.warn("GAS Fetch notice:", e);
+    } catch (err) {
+      console.error("Cloud sync initial error:", err);
+      // エラー時はサンプルデータ(あれば)をロード
+      if (typeof SAMPLE_RECORDS !== "undefined" && this.records.length === 0) {
+        this.records = [...SAMPLE_RECORDS];
+      }
     }
   }
 
-  // ユーザー名
+  // ユーザー名 (sessionStorageを使用)
   getCurrentUser() {
-    return localStorage.getItem(this.userNameKey) || "";
+    return sessionStorage.getItem(this.userNameKey) || "";
   }
 
   setCurrentUser(name) {
-    localStorage.setItem(this.userNameKey, name.trim());
+    sessionStorage.setItem(this.userNameKey, name.trim());
   }
 
   // 学年・クラス階層構造
   getGradeHierarchy() {
     try {
-      const raw = localStorage.getItem(this.gradeHierarchyKey);
+      const raw = sessionStorage.getItem(this.gradeHierarchyKey);
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn(e);
     }
-    return DEFAULT_GRADE_HIERARCHY;
+    return typeof DEFAULT_GRADE_HIERARCHY !== 'undefined' ? DEFAULT_GRADE_HIERARCHY : [];
   }
 
   saveGradeHierarchy(hierarchy) {
-    localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(hierarchy));
+    sessionStorage.setItem(this.gradeHierarchyKey, JSON.stringify(hierarchy));
   }
 
   getAllClassNames() {
@@ -111,53 +76,18 @@ class StorageService {
   }
 
   async countRecords() {
-    return new Promise((resolve) => {
-      const transaction = this.db.transaction(["records"], "readonly");
-      const store = transaction.objectStore("records");
-      const countRequest = store.count();
-      countRequest.onsuccess = () => resolve(countRequest.result);
-      countRequest.onerror = () => resolve(0);
-    });
+    return this.records.length;
   }
 
   async getAllRecords() {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["records"], "readonly");
-      const store = transaction.objectStore("records");
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const records = request.result || [];
-        records.sort((a, b) => new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00")) - new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00")));
-        resolve(records);
-      };
-
-      request.onerror = () => reject(request.error);
-    });
+    return this.records;
   }
 
   async getRecordById(id) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["records"], "readonly");
-      const store = transaction.objectStore("records");
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.records.find(r => r.id === id) || null;
   }
 
-  // 端末内IndexedDBへの直接保存
-  async saveRecordLocal(record) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["records"], "readwrite");
-      const store = transaction.objectStore("records");
-      const request = store.put(record);
-      request.onsuccess = () => resolve(record);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // 投稿の保存（ローカルIndexedDB保存 ＋ Googleドライブ/スプレッドシートへ送信）
+  // 投稿の保存（GASへの直接送信後、メモリを更新）
   async saveRecord(record) {
     if (!record.id) {
       record.id = "rec_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
@@ -173,11 +103,29 @@ class StorageService {
     }
     record.updatedAt = new Date().toISOString();
 
-    // 1. まずローカルに保存して瞬時にUIに反映
-    await this.saveRecordLocal(record);
+    // 1. GASに送信 (非同期ではなく待機する)
+    try {
+      await this.sendToGas(record);
+      
+      // 2. 成功したらメモリのレコードを更新
+      const index = this.records.findIndex(r => r.id === record.id);
+      if (index >= 0) {
+        this.records[index] = record;
+      } else {
+        this.records.unshift(record); // 先頭に追加
+      }
 
-    // 2. クラウド（GAS）に送信
-    this.sendToGas(record).catch(err => console.warn("GAS save error:", err));
+      // 降順ソート維持
+      this.records.sort((a, b) => {
+        const dateA = new Date(a.date + "T" + (a.createdAt ? a.createdAt.split("T")[1] : "00:00:00"));
+        const dateB = new Date(b.date + "T" + (b.createdAt ? b.createdAt.split("T")[1] : "00:00:00"));
+        return dateB - dateA;
+      });
+
+    } catch (err) {
+      console.error("Failed to save to GAS:", err);
+      throw err;
+    }
 
     return record;
   }
@@ -186,36 +134,34 @@ class StorageService {
   async sendToGas(record) {
     if (!this.gasUrl) return;
 
-    try {
-      const payload = {
-        id: record.id,
-        authorName: record.authorName,
-        date: record.date,
-        className: record.className,
-        image: record.photoUrl,
-        filename: `${record.date}_${record.className}_${record.id}.jpg`,
-        comment: record.comment,
-        aspects: record.aspects || [],
-        likes: record.likes || 0,
-        comments: record.comments || [],
-        createdAt: record.createdAt
-      };
+    const payload = {
+      id: record.id,
+      authorName: record.authorName,
+      date: record.date,
+      className: record.className,
+      image: record.photoUrl,
+      filename: `${record.date}_${record.className}_${record.id}.jpg`,
+      comment: record.comment,
+      aspects: record.aspects || [],
+      likes: record.likes || 0,
+      comments: record.comments || [],
+      createdAt: record.createdAt,
+      action: "save"
+    };
 
-      const res = await fetch(this.gasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
+    const res = await fetch(this.gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
 
-      if (res.ok) {
-        const result = await res.json();
-        if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
-          record.photoUrl = result.photoUrl;
-          await this.saveRecordLocal(record);
-        }
-      }
-    } catch (err) {
-      console.warn("GAS POST notice:", err);
+    if (!res.ok) {
+      throw new Error(`GAS request failed: ${res.status}`);
+    }
+
+    const result = await res.json();
+    if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
+      record.photoUrl = result.photoUrl;
     }
   }
 
@@ -231,18 +177,27 @@ class StorageService {
       createdAt: new Date().toISOString()
     };
     record.comments.push(newComment);
+    
+    // 全体を保存（通信）
     await this.saveRecord(record);
     return record;
   }
 
   async deleteRecord(id) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["records"], "readwrite");
-      const store = transaction.objectStore("records");
-      const request = store.delete(id);
-      request.onsuccess = () => resolve(true);
-      request.onerror = () => reject(request.error);
-    });
+    if (this.gasUrl) {
+      try {
+        await fetch(this.gasUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "delete", id: id })
+        });
+      } catch (err) {
+        console.warn("Delete request to GAS failed", err);
+      }
+    }
+
+    this.records = this.records.filter(r => r.id !== id);
+    return true;
   }
 
   async toggleLike(id) {
@@ -263,12 +218,11 @@ class StorageService {
   }
 
   // ================= エクスポート =================
-
   async exportJson() {
     const records = await this.getAllRecords();
     const data = {
       app: "instaKuram",
-      version: "4.0_cloud_synced",
+      version: "5.0_cloud_only",
       currentUser: this.getCurrentUser(),
       gradeHierarchy: this.getGradeHierarchy(),
       exportedAt: new Date().toISOString(),
@@ -291,7 +245,7 @@ class StorageService {
     
     const rows = records.map(r => {
       const aspectNames = (r.aspects || []).map(id => {
-        const aspect = TEN_ASPECTS.find(a => a.id === id);
+        const aspect = (typeof TEN_ASPECTS !== 'undefined') ? TEN_ASPECTS.find(a => a.id === id) : null;
         return aspect ? aspect.tag : id;
       }).join(" ");
 

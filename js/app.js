@@ -590,7 +590,7 @@ class EduRecordApp {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_SIDE = 1400;
+        const MAX_SIDE = 1000;
         let width = img.width;
         let height = img.height;
 
@@ -611,7 +611,7 @@ class EduRecordApp {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        this.currentPhotoData = canvas.toDataURL("image/jpeg", 0.88);
+        this.currentPhotoData = canvas.toDataURL("image/jpeg", 0.75);
         this.photoPreviewImg.src = this.currentPhotoData;
         this.uploadPlaceholder.classList.add("hidden");
         this.previewContainer.classList.remove("hidden");
