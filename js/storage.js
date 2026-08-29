@@ -30,6 +30,14 @@ class StorageService {
                   r.date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
                 }
               }
+
+              // Google Driveの画像を埋め込み用(thumbnail)URLに変換 (Cookieブロック回避)
+              if (r.photoUrl && r.photoUrl.includes("drive.google.com")) {
+                const match = r.photoUrl.match(/id=([a-zA-Z0-9_-]+)/);
+                if (match) {
+                  r.photoUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+                }
+              }
             });
 
             // 作成日時の降順にソートしてメモリに保持
