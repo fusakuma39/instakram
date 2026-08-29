@@ -8,7 +8,7 @@ class StorageService {
     this.gradeHierarchyKey = "instaKuram_grade_hierarchy";
     
     // GAS Web AppエンドポイントURL
-    this.gasUrl = "https://script.google.com/macros/s/AKfycbwhuqZlEyHPRlcslldS_SSLvsMLZ7E3xHxybbwVuYnsUPpAf8iJGGcstO5yIlmGDnAx/exec";
+    this.gasUrl = "https://script.google.com/macros/s/AKfycbyNWrW3UEwegNLdFYIN2fBhjV7mbjmC18ZBxmNviVUqjgyO_Dg1lD92NzbY2bGYh-VUvg/exec";
 
     // メモリ上のレコードキャッシュ
     this.records = [];
@@ -107,7 +107,8 @@ class StorageService {
     try {
       await this.sendToGas(record);
     } catch (err) {
-      console.warn("GASへの保存に失敗しましたが、ローカルには保存します:", err);
+      console.error("GAS Error:", err);
+      alert("ドライブへの保存に失敗しました。\nエラー詳細: " + err.message + "\n\n※AIアシスタントにこのエラーメッセージを伝えてください。");
     }
       
     // 2. メモリのレコードを更新
