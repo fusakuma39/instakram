@@ -116,7 +116,18 @@ class FeedController {
       return `<button class="feed-hashtag-btn" data-aspect-id="${aspect.id}">${aspect.tag}</button>`;
     }).join(" ");
 
-    const reactionsHtml = (rec.reactions || []).map(r => `<span class="reaction-emoji-badge">${r}</span>`).join("");
+    const reactionCounts = {};
+    const myReactions = new Set();
+    (rec.reactions || []).forEach(r => {
+      let emoji = typeof r === 'string' ? r : r.emoji;
+      let author = typeof r === 'string' ? '' : r.author;
+      reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+      if (author === currentUserName) myReactions.add(emoji);
+    });
+
+    const reactionsHtml = Object.entries(reactionCounts).map(([emoji, count]) => 
+      `<span class="reaction-emoji-badge ${myReactions.has(emoji) ? 'my-reaction' : ''}" data-emoji="${emoji}">${emoji} ${count > 1 ? count : ''}</span>`
+    ).join("");
     const commentsList = rec.comments || [];
 
     let commentsPreviewHtml = "";
@@ -165,6 +176,11 @@ class FeedController {
             <img src="${url}" alt="実践写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
           `).join('')}
         </div>
+        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
+        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+          <button class="carousel-btn prev-btn hidden"><i data-lucide="chevron-left"></i></button>
+          <button class="carousel-btn next-btn"><i data-lucide="chevron-right"></i></button>
+        ` : ''}
         <div class="heart-overlay-anim hidden"><i data-lucide="heart"></i></div>
         <button class="btn-fullscreen-trigger" title="全画面表示"><i data-lucide="maximize-2"></i></button>
       </div>
@@ -255,9 +271,22 @@ class FeedController {
     });
 
     // いいね
-    card.querySelector(".btn-feed-like")?.addEventListener("click", async () => {
-      await window.storageService.toggleLike(rec.id);
+    card.querySelector(".btn-feed-like")?.addEventListener("click", () => {
+      window.storageService.toggleLike(rec.id).catch(e => console.error(e));
+      
+      // Optimistic update
+      if (!rec.likes) rec.likes = [];
+      const currentUserName = window.storageService.getCurrentUser() || "先生";
+      const index = rec.likes.indexOf(currentUserName);
+      if (index >= 0) rec.likes.splice(index, 1);
+      else rec.likes.push(currentUserName);
       this.app.refreshAllViews();
+    });
+
+    card.querySelector(".insta-likes-count span")?.addEventListener("click", () => {
+      if (rec.likes && rec.likes.length > 0) {
+        this.app.showListModal("共感した人", rec.likes);
+      }
     });
 
     // 詳細モーダル表示
@@ -310,10 +339,63 @@ class FeedController {
         e.stopPropagation();
         stampPopup?.classList.add("hidden");
         const emoji = opt.dataset.emoji.split(" ")[0];
-        await window.storageService.addReaction(rec.id, emoji);
+        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        
+        // Optimistic update
+        if (!rec.reactions) rec.reactions = [];
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
+        if (existingIndex >= 0) {
+          rec.reactions.splice(existingIndex, 1);
+        } else {
+          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        }
         this.app.refreshAllViews();
       });
     });
+
+    card.querySelectorAll(".reaction-emoji-badge").forEach(badge => {
+      badge.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const emoji = badge.dataset.emoji;
+        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        
+        // Optimistic update
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
+        if (existingIndex >= 0) {
+          rec.reactions.splice(existingIndex, 1);
+        } else {
+          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        }
+        this.app.refreshAllViews();
+      });
+    });
+
+    const carousel = card.querySelector(".insta-carousel");
+    const prevBtn = card.querySelector(".prev-btn");
+    const nextBtn = card.querySelector(".next-btn");
+    if (carousel && prevBtn && nextBtn) {
+      const updateButtons = () => {
+        const scrollLeft = carousel.scrollLeft;
+        const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
+        if (scrollLeft > 5) prevBtn.classList.remove("hidden");
+        else prevBtn.classList.add("hidden");
+        if (scrollLeft < maxScrollLeft - 5) nextBtn.classList.remove("hidden");
+        else nextBtn.classList.add("hidden");
+      };
+      carousel.addEventListener("scroll", updateButtons);
+      setTimeout(updateButtons, 100);
+
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        carousel.scrollBy({ left: -carousel.clientWidth, behavior: "smooth" });
+      });
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        carousel.scrollBy({ left: carousel.clientWidth, behavior: "smooth" });
+      });
+    }
 
     return card;
   }

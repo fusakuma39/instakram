@@ -507,6 +507,7 @@ body {
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 0.9rem;
+  white-space: nowrap;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--tr-fast);
@@ -988,6 +989,16 @@ body {
   background: var(--bg-subtle);
   border-radius: var(--radius-full);
   padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.reaction-emoji-badge:hover {
+  background: var(--bg-hover);
+  transform: scale(1.1);
+}
+.reaction-emoji-badge.my-reaction {
+  background: var(--primary-100);
+  border: 1px solid var(--primary-300);
 }
 
 .reaction-picker-drop {
@@ -1176,6 +1187,39 @@ body {
 .insta-carousel::-webkit-scrollbar {
   display: none;
 }
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  color: #333;
+  transition: all 0.2s ease;
+}
+.carousel-btn:hover {
+  background: #fff;
+  transform: translateY(-50%) scale(1.1);
+}
+.carousel-btn.prev-btn {
+  left: 8px;
+}
+.carousel-btn.next-btn {
+  right: 8px;
+}
+@media (max-width: 768px) {
+  .carousel-btn { display: none !important; }
+}
+
 .insta-carousel .insta-photo-img.natural-fit {
   flex: 0 0 100%;
   scroll-snap-align: center;
@@ -1210,13 +1254,35 @@ body {
   opacity: 1;
 }
 
+.multi-photo-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  pointer-events: none;
+}
+.multi-photo-indicator i {
+  width: 14px;
+  height: 14px;
+}
+
 .heart-overlay-anim {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 5rem;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+  z-index: 10;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
   animation: heartPopIn 0.75s ease-out forwards;
 }
@@ -1786,6 +1852,12 @@ body {
   overflow: hidden;
   animation: modalScale 0.25s var(--tr-bounce);
 }
+.modal-form-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
 .modal-body {
   overflow-y: auto;
   flex: 1;
@@ -1798,8 +1870,15 @@ body {
 
 .modal-welcome {
   max-width: 480px;
-  padding: 32px;
+  padding: 0;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  max-height: 90dvh;
+  overflow: hidden;
+}
+.welcome-header {
+  padding: 32px 32px 0 32px;
 }
 .welcome-icon-wrap {
   width: 64px;
@@ -1829,6 +1908,16 @@ body {
   flex-direction: column;
   gap: 18px;
   text-align: left;
+  overflow-y: auto;
+  flex: 1;
+  padding: 24px 32px;
+}
+.welcome-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-surface);
+  padding-bottom: 24px;
+  margin-top: auto;
 }
 .btn-welcome-submit {
   width: 100%;
@@ -2583,11 +2672,14 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  white-space: nowrap;
   font-size: 0.9rem;
   font-weight: 600;
   box-shadow: var(--shadow-popup);
   z-index: 2000;
   animation: toastSlideUp 0.25s ease-out;
+  width: max-content;
+  max-width: 90vw;
 }
 .toast-icon { color: #66BB6A; display: flex; align-items: center; }
 .toast-icon i { width: 20px; height: 20px; }
@@ -2762,6 +2854,7 @@ body {
   padding: 6px 12px;
   transition: all var(--tr-fast);
   flex: 1;
+  white-space: nowrap;
 }
 
 .mobile-nav-item i {
@@ -2969,6 +3062,8 @@ body {
   }
 
   .form-body-split {
+    display: flex;
+    flex-direction: column;
     padding: 14px;
     gap: 14px;
   }

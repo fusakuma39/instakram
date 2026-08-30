@@ -241,8 +241,19 @@ class CalendarController {
       if (!aspect) return "";
       return `<button class="card-hashtag-pill" data-aspect-id="${aspect.id}">${aspect.tag}</button>`;
     }).join(" ");
+    
+    const reactionCounts = {};
+    const myReactions = new Set();
+    (rec.reactions || []).forEach(r => {
+      let emoji = typeof r === 'string' ? r : r.emoji;
+      let author = typeof r === 'string' ? '' : r.author;
+      reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+      if (author === currentUserName) myReactions.add(emoji);
+    });
 
-    const reactionsHtml = (rec.reactions || []).map(r => `<span class="reaction-emoji-badge">${r}</span>`).join("");
+    const reactionsHtml = Object.entries(reactionCounts).map(([emoji, count]) => 
+      `<span class="reaction-emoji-badge ${myReactions.has(emoji) ? 'my-reaction' : ''}" data-emoji="${emoji}">${emoji} ${count > 1 ? count : ''}</span>`
+    ).join("");
     const commentsList = rec.comments || [];
 
     card.innerHTML = `
@@ -259,7 +270,12 @@ class CalendarController {
       </div>
 
       <div class="record-photo-wrapper">
-        <img src="${rec.photoUrl}" alt="実践写真" class="record-main-photo" loading="lazy">
+        <img src="${rec.photoUrl ? rec.photoUrl.split(',')[0] : ''}" alt="実践写真" class="record-main-photo" loading="lazy">
+        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
+        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+          <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
+          <button class="carousel-btn next-btn" style="right:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-right"></i></button>
+        ` : ''}
         <button class="btn-photo-expand" title="写真を拡大"><i data-lucide="maximize-2"></i></button>
       </div>
 
@@ -277,7 +293,7 @@ class CalendarController {
 
         <div class="record-card-footer">
           <div class="record-reactions">
-            <button class="btn-like-action ${(rec.likes || []).includes(window.storageService.getCurrentUser() || '先生') ? 'liked fill-liked' : ''}" data-id="${rec.id}">
+            <button class="btn-like-action ${(rec.likes || []).includes(window.storageService.getCurrentUser() || '先生') ? 'liked fill-liked' : ''}" data-id="${rec.id}" title="共感した人: ${(rec.likes || []).join(', ') || 'なし'}">
               <i data-lucide="heart"></i> <span class="like-count">${(rec.likes || []).length}</span>
             </button>
             <div class="reactions-list">${reactionsHtml}</div>
@@ -355,10 +371,66 @@ class CalendarController {
         e.stopPropagation();
         const emoji = opt.dataset.emoji;
         stampPalette?.classList.add("hidden");
-        await window.storageService.addReaction(rec.id, emoji);
+        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        
+        // Optimistic update
+        if (!rec.reactions) rec.reactions = [];
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
+        if (existingIndex >= 0) {
+          rec.reactions.splice(existingIndex, 1);
+        } else {
+          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        }
         this.app.refreshAllViews();
       });
     });
+
+    card.querySelectorAll(".reaction-emoji-badge").forEach(badge => {
+      badge.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const emoji = badge.dataset.emoji;
+        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        
+        // Optimistic update
+        if (!rec.reactions) rec.reactions = [];
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
+        if (existingIndex >= 0) {
+          rec.reactions.splice(existingIndex, 1);
+        } else {
+          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        }
+        this.app.refreshAllViews();
+      });
+    });
+
+    const imgEl = card.querySelector(".record-main-photo");
+    const prevBtn = card.querySelector(".prev-btn");
+    const nextBtn = card.querySelector(".next-btn");
+    if (imgEl && prevBtn && nextBtn && rec.photoUrl) {
+      const urls = rec.photoUrl.split(',');
+      let currentIndex = 0;
+      const updateButtons = () => {
+        if (currentIndex > 0) prevBtn.classList.remove("hidden");
+        else prevBtn.classList.add("hidden");
+        if (currentIndex < urls.length - 1) nextBtn.classList.remove("hidden");
+        else nextBtn.classList.add("hidden");
+      };
+      updateButtons();
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) currentIndex--;
+        imgEl.src = urls[currentIndex];
+        updateButtons();
+      });
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentIndex < urls.length - 1) currentIndex++;
+        imgEl.src = urls[currentIndex];
+        updateButtons();
+      });
+    }
 
     return card;
   }

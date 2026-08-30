@@ -477,10 +477,15 @@ class EduRecordApp {
   }
 
   async refreshAllViews() {
-    await this.calendarCtrl?.render();
-    if (this.currentView === "feed") await this.feedCtrl?.renderFeed();
-    if (this.currentView === "gallery") await this.feedCtrl?.renderGallery();
-    if (this.currentView === "analytics") await this.analyticsCtrl?.render();
+    try {
+      await this.calendarCtrl?.render();
+      if (this.currentView === "feed") await this.feedCtrl?.renderFeed();
+      if (this.currentView === "gallery") await this.feedCtrl?.renderGallery();
+      if (this.currentView === "analytics") await this.analyticsCtrl?.render();
+    } catch (err) {
+      console.error("refreshAllViews error:", err);
+      alert("デバッグ情報: 画面の更新中にエラーが発生しました。\n" + err.toString());
+    }
   }
 
   setupSearch() {
@@ -1180,6 +1185,90 @@ class EduRecordApp {
     setTimeout(() => {
       this.toastEl.classList.add("hidden");
     }, 3200);
+  }
+  showListModal(title, items) {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
+    overlay.style.zIndex = "9999";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.backdropFilter = "blur(4px)";
+    
+    const modal = document.createElement("div");
+    modal.style.background = "var(--bg-surface)";
+    modal.style.borderRadius = "var(--radius-lg)";
+    modal.style.padding = "20px";
+    modal.style.width = "90%";
+    modal.style.maxWidth = "320px";
+    modal.style.boxShadow = "var(--shadow-xl)";
+    modal.style.animation = "modalFadeIn 0.3s ease";
+    
+    const h3 = document.createElement("h3");
+    h3.textContent = title;
+    h3.style.marginTop = "0";
+    h3.style.marginBottom = "16px";
+    h3.style.fontSize = "1.1rem";
+    h3.style.color = "var(--text-primary)";
+    h3.style.borderBottom = "1px solid var(--border-light)";
+    h3.style.paddingBottom = "8px";
+    h3.style.display = "flex";
+    h3.style.justifyContent = "space-between";
+    h3.style.alignItems = "center";
+
+    const closeIcon = document.createElement("button");
+    closeIcon.innerHTML = "&times;";
+    closeIcon.style.background = "none";
+    closeIcon.style.border = "none";
+    closeIcon.style.fontSize = "1.5rem";
+    closeIcon.style.color = "var(--text-muted)";
+    closeIcon.style.cursor = "pointer";
+    closeIcon.onclick = () => overlay.remove();
+    h3.appendChild(closeIcon);
+    
+    const ul = document.createElement("ul");
+    ul.style.listStyle = "none";
+    ul.style.padding = "0";
+    ul.style.margin = "0 0 20px 0";
+    ul.style.maxHeight = "300px";
+    ul.style.overflowY = "auto";
+    
+    if (items.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "まだありません";
+      li.style.color = "var(--text-muted)";
+      li.style.padding = "8px 0";
+      li.style.textAlign = "center";
+      ul.appendChild(li);
+    } else {
+      items.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        li.style.padding = "10px 0";
+        li.style.borderBottom = "1px solid var(--border-light)";
+        li.style.fontWeight = "600";
+        ul.appendChild(li);
+      });
+    }
+    
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "閉じる";
+    closeBtn.className = "btn btn-primary";
+    closeBtn.style.width = "100%";
+    closeBtn.onclick = () => overlay.remove();
+    
+    overlay.onclick = (e) => {
+      if (e.target === overlay) overlay.remove();
+    };
+    
+    modal.appendChild(h3);
+    modal.appendChild(ul);
+    modal.appendChild(closeBtn);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
   }
 
   openDetailModal(rec) {

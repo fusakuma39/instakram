@@ -38,15 +38,30 @@ class StorageService {
       const res = await fetch(this.gasUrl, { method: "GET" });
       if (res.ok) {
         const cloudRecords = await res.json();
+        if (cloudRecords && cloudRecords.error) {
+          console.error("GAS error:", cloudRecords.error);
+          return;
+        }
+        let recordsArray = null;
         if (Array.isArray(cloudRecords)) {
-          this.processCloudRecords(cloudRecords);
+          recordsArray = cloudRecords;
+        } else if (cloudRecords && Array.isArray(cloudRecords.records)) {
+          recordsArray = cloudRecords.records;
+        }
+        
+        if (recordsArray) {
+          this.processCloudRecords(recordsArray);
           localStorage.setItem("insta_records_cache", JSON.stringify(this.records));
           // UI更新を通知
           document.dispatchEvent(new CustomEvent('instaDataUpdated'));
+        } else {
+          console.error("GAS returned non-array data", cloudRecords);
         }
+      } else {
+        console.error("GAS fetch failed with status:", res.status);
       }
     } catch (err) {
-      console.error("Cloud sync background error:", err);
+      console.error("Cloud fetch failed:", err);
     }
   }
 
@@ -75,6 +90,13 @@ class StorageService {
       } else if (!Array.isArray(r.likes)) {
         r.likes = [];
       }
+      if (Array.isArray(r.comments)) {
+        r.reactions = r.comments.filter(c => c && c.isReaction);
+        r.comments = r.comments.filter(c => c && !c.isReaction);
+      } else {
+        r.comments = [];
+        r.reactions = [];
+      }
     });
 
     const systemRecIndex = cloudRecords.findIndex(r => r.id === "system_hierarchy_config" && r.className === "_SYSTEM_");
@@ -98,6 +120,7 @@ class StorageService {
       const dateB = new Date(b.date + "T" + timeB);
       return dateB - dateA;
     });
+    return this.records;
   }
 
   // ユーザー名 (sessionStorageを使用)
@@ -196,7 +219,8 @@ class StorageService {
       const payload = {
         action: "save",
         ...record,
-        likes: Array.isArray(record.likes) ? record.likes.join(',') : record.likes
+        likes: Array.isArray(record.likes) ? record.likes.join(',') : record.likes,
+        comments: [...(record.comments || []), ...(record.reactions || [])]
       };
 
       const res = await fetch(this.gasUrl, {
@@ -244,8 +268,8 @@ class StorageService {
     };
     record.comments.push(newComment);
     
-    // 全体を保存（通信）
-    await this.saveRecord(record);
+    // 全体を保存（通信） - バックグラウンドで実行
+    this.saveRecord(record).catch(err => console.error("Comment save error", err));
     return record;
   }
 
@@ -278,19 +302,27 @@ class StorageService {
         rec.likes.push(currentUser); // add like
       }
       
-      // Update memory cache
-      await this.saveRecord(rec);
+      // Update memory cache and trigger background save
+      this.saveRecord(rec).catch(err => console.error("Like save error", err));
       return rec;
     }
     return null;
   }
 
-  async addReaction(id, emoji) {
+  async toggleReaction(id, emoji) {
     const record = await this.getRecordById(id);
     if (!record) return null;
     if (!record.reactions) record.reactions = [];
-    record.reactions.push(emoji);
-    await this.saveRecord(record);
+    const currentUser = this.getCurrentUser() || "先生";
+    
+    const existingIndex = record.reactions.findIndex(r => r.author === currentUser && r.emoji === emoji);
+    if (existingIndex >= 0) {
+      record.reactions.splice(existingIndex, 1);
+    } else {
+      record.reactions.push({ isReaction: true, emoji: emoji, author: currentUser, createdAt: new Date().toISOString() });
+    }
+    
+    this.saveRecord(record).catch(err => console.error("Reaction save error", err));
     return record;
   }
 
