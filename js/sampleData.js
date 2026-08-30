@@ -1,5 +1,5 @@
-/**
- * 小学校 実践記録 初期サンプルデータ（insta倉m）
+﻿/**
+ * 小学校 投稿 初期サンプルデータ（insta倉m）
  */
 const SAMPLE_RECORDS = [
   {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Instagram風タイムラインフィード & 写真グリッドギャラリー コントローラー
  */
 class FeedController {
@@ -50,21 +50,63 @@ class FeedController {
         }
       }
     });
+
+    // Lightbox carousel
+    this.lightboxPrevBtn = document.getElementById("lightboxPrevBtn");
+    this.lightboxNextBtn = document.getElementById("lightboxNextBtn");
+    
+    this.lightboxPrevBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (this.lightboxCurrentIndex > 0) {
+        this.lightboxCurrentIndex--;
+        this.updateLightboxImage();
+      }
+    });
+    this.lightboxNextBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (this.lightboxCurrentIndex < this.lightboxUrls.length - 1) {
+        this.lightboxCurrentIndex++;
+        this.updateLightboxImage();
+      }
+    });
   }
 
-  openLightbox(photoUrl, captionText) {
+  openLightbox(photoUrls, captionText, initialIndex = 0) {
     if (!this.lightboxModal || !this.lightboxImg) return;
-    this.lightboxImg.src = photoUrl;
-    if (this.lightboxCaption) {
-      this.lightboxCaption.textContent = captionText || "";
-    }
-    const fullSizeLink = document.getElementById("lightboxFullSizeLink");
-    if (fullSizeLink) {
-      fullSizeLink.href = photoUrl.replace("&sz=w1000", "");
-    }
+    this.lightboxUrls = Array.isArray(photoUrls) ? photoUrls : (photoUrls ? photoUrls.split(',') : []);
+    this.lightboxCurrentIndex = initialIndex;
+    this.lightboxCaptionText = captionText || "";
+    
+    this.updateLightboxImage();
     this.lightboxModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  updateLightboxImage() {
+    const url = this.lightboxUrls[this.lightboxCurrentIndex];
+    if (!url) return;
+    
+    this.lightboxImg.src = url.replace("&sz=w1000", "&sz=w2000"); // Request higher resolution
+    if (this.lightboxCaption) {
+      this.lightboxCaption.textContent = this.lightboxCaptionText + (this.lightboxUrls.length > 1 ? ` (${this.lightboxCurrentIndex + 1}/${this.lightboxUrls.length})` : "");
+    }
+    const fullSizeLink = document.getElementById("lightboxFullSizeLink");
+    if (fullSizeLink) {
+      const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match) {
+        fullSizeLink.href = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      } else {
+        fullSizeLink.href = url.replace("&sz=w1000", "&sz=w3000");
+      }
+    }
+
+    if (this.lightboxPrevBtn) {
+      this.lightboxPrevBtn.style.display = (this.lightboxUrls.length > 1 && this.lightboxCurrentIndex > 0) ? 'flex' : 'none';
+    }
+    if (this.lightboxNextBtn) {
+      this.lightboxNextBtn.style.display = (this.lightboxUrls.length > 1 && this.lightboxCurrentIndex < this.lightboxUrls.length - 1) ? 'flex' : 'none';
+    }
   }
 
   closeLightbox() {
@@ -85,7 +127,7 @@ class FeedController {
       this.feedContainer.innerHTML = `
         <div class="empty-feed-state">
           <div class="empty-icon-wrap"><i data-lucide="image-off"></i></div>
-          <p class="empty-main-text">表示できる実践記録がありません</p>
+          <p class="empty-main-text">表示できる投稿がありません</p>
           <p class="empty-sub-text">条件を変更するか、右上の「記録を追加」から投稿してください。</p>
         </div>
       `;
@@ -173,7 +215,7 @@ class FeedController {
       <div class="insta-photo-box natural-aspect" title="横スクロールで複数枚表示（右下クリックで拡大）">
         <div class="insta-carousel">
           ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
-            <img src="${url}" alt="実践写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+            <img src="${url}" alt="投稿写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
           `).join('')}
         </div>
         ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
@@ -187,9 +229,9 @@ class FeedController {
 
       <!-- Post Action Bar -->
       <div class="insta-actions-bar">
-        <div class="insta-left-actions">
-          <button class="btn-insta-action btn-feed-like" title="いいね">
-            <i data-lucide="heart" class="${(rec.likes || []).includes(currentUserName) ? 'liked fill-liked' : ''}"></i>
+        <div class="insta-left-actions" style="position: relative;">
+          <button class="btn-insta-action btn-feed-like ${(rec.likes || []).includes(currentUserName) ? 'liked' : ''}" title="いいね">
+            <i data-lucide="heart"></i>
           </button>
           <button class="btn-insta-action btn-feed-stamp-trigger" title="スタンプ">
             <i data-lucide="smile"></i>
@@ -197,6 +239,15 @@ class FeedController {
           <button class="btn-insta-action btn-feed-comment-focus" title="コメント">
             <i data-lucide="message-circle"></i>
           </button>
+          
+          <!-- Mini Stamp Selector Popup -->
+          <div class="feed-stamp-popup hidden">
+            <span class="stamp-opt" data-emoji="👏">👏 すごい</span>
+            <span class="stamp-opt" data-emoji="💡">💡 発見</span>
+            <span class="stamp-opt" data-emoji="✨">✨ 輝き</span>
+            <span class="stamp-opt" data-emoji="🌱">🌱 成長</span>
+            <span class="stamp-opt" data-emoji="❤️">❤️ すてき</span>
+          </div>
         </div>
         <div class="insta-reactions-display">
           ${reactionsHtml}
@@ -205,7 +256,7 @@ class FeedController {
 
       <!-- Likes count -->
       <div class="insta-likes-count">
-        <span>共感 <strong>${(rec.likes || []).length}</strong> 件</span>
+        <span>いいね <strong>${(rec.likes || []).length}</strong> 件</span>
       </div>
 
       <!-- Post Content & Hashtags -->
@@ -226,15 +277,6 @@ class FeedController {
           <button type="submit" class="feed-comment-submit">投稿</button>
         </form>
       </div>
-
-      <!-- Mini Stamp Selector Popup -->
-      <div class="feed-stamp-popup hidden">
-        <span class="stamp-opt" data-emoji="👏">👏 すごい</span>
-        <span class="stamp-opt" data-emoji="💡">💡 発見</span>
-        <span class="stamp-opt" data-emoji="✨">✨ 輝き</span>
-        <span class="stamp-opt" data-emoji="🌱">🌱 成長</span>
-        <span class="stamp-opt" data-emoji="❤️">❤️ すてき</span>
-      </div>
     `;
 
     // 写真クリック / ダブルタップ
@@ -242,28 +284,39 @@ class FeedController {
     let lastTap = 0;
     photoBox.addEventListener("click", async (e) => {
       if (e.target.closest(".btn-fullscreen-trigger")) {
-        const firstPhoto = rec.photoUrl ? rec.photoUrl.split(',')[0] : "";
-        this.openLightbox(firstPhoto, `${rec.className} (${rec.date}) - ${rec.comment}`);
+        const carousel = photoBox.querySelector(".insta-carousel");
+        const scrollLeft = carousel ? carousel.scrollLeft : 0;
+        const width = carousel ? carousel.clientWidth : 1;
+        const currentIndex = Math.round(scrollLeft / width);
+        this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`, currentIndex);
         return;
       }
 
       const now = Date.now();
       if (now - lastTap < 300) {
-        // Double tap -> Like
-        const heartAnim = card.querySelector(".heart-overlay-anim");
-        heartAnim?.classList.remove("hidden");
-        setTimeout(() => heartAnim?.classList.add("hidden"), 800);
-        
-        await window.storageService.toggleLike(rec.id);
-        this.app.refreshAllViews();
-        if (typeof confetti === "function") {
-          confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
+        // Double tap -> Like (Only if not liked yet)
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const hasLiked = (rec.likes || []).includes(currentUserName);
+        if (!hasLiked) {
+          const heartAnim = card.querySelector(".heart-overlay-anim");
+          heartAnim?.classList.remove("hidden");
+          setTimeout(() => heartAnim?.classList.add("hidden"), 800);
+          
+          await window.storageService.toggleLike(rec.id);
+          this.app.refreshAllViews();
+          if (typeof confetti === "function") {
+            confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
+          }
         }
       } else {
         // Single tap -> Open Lightbox
         setTimeout(() => {
           if (Date.now() - lastTap >= 300) {
-            this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`);
+            const carousel = photoBox.querySelector(".insta-carousel");
+            const scrollLeft = carousel ? carousel.scrollLeft : 0;
+            const width = carousel ? carousel.clientWidth : 1;
+            const currentIndex = Math.round(scrollLeft / width);
+            this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`, currentIndex);
           }
         }, 300);
       }
@@ -271,21 +324,21 @@ class FeedController {
     });
 
     // いいね
-    card.querySelector(".btn-feed-like")?.addEventListener("click", () => {
-      window.storageService.toggleLike(rec.id).catch(e => console.error(e));
-      
-      // Optimistic update
-      if (!rec.likes) rec.likes = [];
-      const currentUserName = window.storageService.getCurrentUser() || "先生";
-      const index = rec.likes.indexOf(currentUserName);
-      if (index >= 0) rec.likes.splice(index, 1);
-      else rec.likes.push(currentUserName);
-      this.app.refreshAllViews();
+    card.querySelector(".btn-feed-like")?.addEventListener("click", async () => {
+      const updated = await window.storageService.toggleLike(rec.id);
+      if (updated) {
+        const currentUserName = window.storageService.getCurrentUser() || "先生";
+        const hasLiked = (updated.likes || []).includes(currentUserName);
+        this.app.refreshAllViews();
+        if (hasLiked && typeof confetti === "function") {
+          confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
+        }
+      }
     });
 
     card.querySelector(".insta-likes-count span")?.addEventListener("click", () => {
       if (rec.likes && rec.likes.length > 0) {
-        this.app.showListModal("共感した人", rec.likes);
+        this.app.showListModal("いいねした人", rec.likes);
       }
     });
 
@@ -339,36 +392,23 @@ class FeedController {
         e.stopPropagation();
         stampPopup?.classList.add("hidden");
         const emoji = opt.dataset.emoji.split(" ")[0];
-        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
         
-        // Optimistic update
-        if (!rec.reactions) rec.reactions = [];
-        const currentUserName = window.storageService.getCurrentUser() || "先生";
-        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
-        if (existingIndex >= 0) {
-          rec.reactions.splice(existingIndex, 1);
-        } else {
-          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
-        }
+        await window.storageService.toggleReaction(rec.id, emoji);
         this.app.refreshAllViews();
       });
     });
 
     card.querySelectorAll(".reaction-emoji-badge").forEach(badge => {
-      badge.addEventListener("click", async (e) => {
+      badge.addEventListener("click", (e) => {
         e.stopPropagation();
         const emoji = badge.dataset.emoji;
-        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        const reactionAuthors = (rec.reactions || [])
+          .filter(r => (typeof r === 'object' ? r.emoji : r) === emoji)
+          .map(r => typeof r === 'object' ? r.author : '先生');
         
-        // Optimistic update
-        const currentUserName = window.storageService.getCurrentUser() || "先生";
-        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
-        if (existingIndex >= 0) {
-          rec.reactions.splice(existingIndex, 1);
-        } else {
-          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        if (reactionAuthors.length > 0) {
+          this.app.showListModal(`${emoji} した人`, reactionAuthors);
         }
-        this.app.refreshAllViews();
       });
     });
 
@@ -480,7 +520,7 @@ class FeedController {
       <div class="detail-left-media" title="横スクロールで複数枚表示（クリックで拡大）">
         <div class="insta-carousel">
           ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
-            <img src="${url}" alt="実践写真" class="detail-full-photo insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+            <img src="${url}" alt="投稿写真" class="detail-full-photo insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
           `).join('')}
         </div>
       </div>
@@ -523,10 +563,13 @@ class FeedController {
       </div>
     `;
 
-    // 写真クリックでライトボックス
+    // 写真クリックで拡大ボックス
     this.detailModalBody.querySelector(".detail-left-media")?.addEventListener("click", () => {
-      const firstPhoto = rec.photoUrl ? rec.photoUrl.split(',')[0] : "";
-      this.openLightbox(firstPhoto, `${rec.className} (${rec.date}) - ${rec.comment}`);
+      const carousel = this.detailModalBody.querySelector(".insta-carousel");
+      const scrollLeft = carousel ? carousel.scrollLeft : 0;
+      const width = carousel ? carousel.clientWidth : 1;
+      const currentIndex = Math.round(scrollLeft / width);
+      this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`, currentIndex);
     });
 
     const modalCommentForm = this.detailModalBody.querySelector("#modalAddCommentForm");
@@ -549,10 +592,10 @@ class FeedController {
     });
 
     this.detailModalBody.querySelector(".btn-modal-delete")?.addEventListener("click", async () => {
-      if (confirm("この実践記録を削除しますか？")) {
+      if (confirm("この投稿を削除しますか？")) {
         await window.storageService.deleteRecord(rec.id);
         this.closeDetailModal();
-        this.app.showToast("実践記録を削除しました");
+        this.app.showToast("投稿を削除しました");
         this.app.refreshAllViews();
       }
     });

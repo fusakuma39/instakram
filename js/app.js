@@ -1,4 +1,4 @@
-/**
+﻿/**
  * insta倉m - メインアプリケーション コントローラー (印刷選択 & UI最適化)
  */
 class EduRecordApp {
@@ -673,7 +673,7 @@ class EduRecordApp {
 
   openEditPostModal(rec) {
     this.recordIdInput.value = rec.id;
-    this.postModalTitle.textContent = "実践記録の編集";
+    this.postModalTitle.textContent = "投稿の編集";
     this.recordAuthorInput.value = rec.authorName || window.storageService.getCurrentUser() || "";
     this.recordDateInput.value = rec.date;
     this.recordCommentInput.value = rec.comment;
@@ -760,7 +760,7 @@ class EduRecordApp {
     await window.storageService.saveRecord(recordData);
     this.closePostModal();
 
-    this.showToast(isEdit ? "実践記録を更新しました！" : "新しい実践を投稿しました！📸✨");
+    this.showToast(isEdit ? "投稿を更新しました！" : "新しい実践を投稿しました！📸✨");
     if (!isEdit && typeof confetti === "function") {
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
     }
@@ -872,7 +872,7 @@ class EduRecordApp {
     
     const records = await window.storageService.getAllRecords();
     if (records.length === 0) {
-      alert("印刷対象となる実践記録がありません。");
+      alert("印刷対象となる投稿がありません。");
       return;
     }
 
@@ -1004,7 +1004,7 @@ class EduRecordApp {
           return `
             <div class="print-record-card">
               <div class="print-card-img-wrap">
-                <img src="${r.photoUrl ? r.photoUrl.split(',')[0] : ''}" alt="実践写真" class="print-card-img">
+                <img src="${r.photoUrl ? r.photoUrl.split(',')[0] : ''}" alt="投稿写真" class="print-card-img">
               </div>
               <div class="print-card-body">
                 <div class="print-card-top-row">

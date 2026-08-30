@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 完全クラウド同期対応 ストレージサービス (Google Apps Script / Drive / Spreadsheet)
  * ローカルストレージ(IndexedDB, localStorage)を廃止し、sessionStorageとメモリで状態管理を行います。
  */
@@ -135,7 +135,7 @@ class StorageService {
   // 学年・クラス階層構造
   getGradeHierarchy() {
     try {
-      const raw = sessionStorage.getItem(this.gradeHierarchyKey);
+      const raw = localStorage.getItem(this.gradeHierarchyKey);
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.warn(e);
@@ -144,7 +144,7 @@ class StorageService {
   }
 
   saveGradeHierarchy(hierarchy) {
-    sessionStorage.setItem(this.gradeHierarchyKey, JSON.stringify(hierarchy));
+    localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(hierarchy));
   }
 
   getAllClassNames() {
@@ -343,7 +343,7 @@ class StorageService {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `insta倉m_小学校実践記録バックアップ_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `insta倉m_小学校投稿バックアップ_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

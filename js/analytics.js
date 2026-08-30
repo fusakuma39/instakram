@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 学びの実践ストック＆成長蓄積カリキュラム分析 コントローラー (レベル表記なし・ストック型)
  */
 class AnalyticsController {
@@ -65,7 +65,7 @@ class AnalyticsController {
         blocksHtml += `<span class="stock-block-plus">+${count - maxVisualBlocks}</span>`;
       }
 
-      // 最近の実践写真サムネイルプレビュー
+      // 最近の投稿写真サムネイルプレビュー
       let recentThumbsHtml = "";
       if (stat.recentRecords.length > 0) {
         const thumbs = stat.recentRecords.map(r => `
@@ -128,7 +128,7 @@ class AnalyticsController {
   generateInsights(aspectStats, totalRecords) {
     if (totalRecords === 0) {
       this.insightsContent.innerHTML = `
-        <p class="text-muted">実践記録が蓄積されると、子どもたちの学びのストック状況や単元展開へのヒントがここに表示されます。</p>
+        <p class="text-muted">投稿が蓄積されると、子どもたちの学びのストック状況や単元展開へのヒントがここに表示されます。</p>
       `;
       return;
     }

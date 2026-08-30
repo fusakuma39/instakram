@@ -186,14 +186,14 @@ class CalendarController {
     }
 
     if (this.selectedDateHeading) {
-      this.selectedDateHeading.textContent = `${year}年${month}月${day}日 (${dayOfWeekStr}) の実践記録`;
+      this.selectedDateHeading.textContent = `${year}年${month}月${day}日 (${dayOfWeekStr}) の投稿`;
     }
 
     const allFiltered = await this.app.getFilteredRecords();
     const dayRecords = allFiltered.filter(r => r.date === dateStr);
 
     if (this.selectedDateSub) {
-      this.selectedDateSub.textContent = `${dayRecords.length} 件の実践記録があります`;
+      this.selectedDateSub.textContent = `${dayRecords.length} 件の投稿があります`;
     }
 
     if (!this.dayRecordsList) return;
@@ -205,7 +205,7 @@ class CalendarController {
           <div class="empty-icon-wrap">
             <i data-lucide="book-open"></i>
           </div>
-          <p class="empty-main-text">この日の実践記録はまだありません</p>
+          <p class="empty-main-text">この日の投稿はまだありません</p>
           <p class="empty-sub-text">児童のつぶやきや学びの瞬間を写真と一緒に記録してみましょう。</p>
           <button class="btn btn-primary btn-sm" id="btnEmptyDayAdd">
             <i data-lucide="camera"></i> 今すぐこの日に記録を追加
@@ -270,7 +270,7 @@ class CalendarController {
       </div>
 
       <div class="record-photo-wrapper">
-        <img src="${rec.photoUrl ? rec.photoUrl.split(',')[0] : ''}" alt="実践写真" class="record-main-photo" loading="lazy">
+        <img src="${rec.photoUrl ? rec.photoUrl.split(',')[0] : ''}" alt="投稿写真" class="record-main-photo" loading="lazy">
         ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
         ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
           <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
@@ -281,6 +281,10 @@ class CalendarController {
 
       <div class="record-card-body">
         ${aspectTagsHtml ? `<div class="aspects-list-row">${aspectTagsHtml}</div>` : ''}
+
+        <div class="insta-likes-count" style="padding: 4px 0; font-size: 0.88rem; cursor: pointer;">
+          <span class="like-count-text">いいね <strong>${(rec.likes || []).length}</strong> 件</span>
+        </div>
 
         <p class="record-comment-text">${this.escapeHtml(rec.comment)}</p>
 
@@ -293,8 +297,8 @@ class CalendarController {
 
         <div class="record-card-footer">
           <div class="record-reactions">
-            <button class="btn-like-action ${(rec.likes || []).includes(window.storageService.getCurrentUser() || '先生') ? 'liked fill-liked' : ''}" data-id="${rec.id}" title="共感した人: ${(rec.likes || []).join(', ') || 'なし'}">
-              <i data-lucide="heart"></i> <span class="like-count">${(rec.likes || []).length}</span>
+            <button class="btn-like-action ${(rec.likes || []).includes(window.storageService.getCurrentUser() || '先生') ? 'liked' : ''}" data-id="${rec.id}" title="いいね">
+              <i data-lucide="heart"></i>
             </button>
             <div class="reactions-list">${reactionsHtml}</div>
             <div class="reaction-picker-drop">
@@ -325,9 +329,9 @@ class CalendarController {
     });
 
     card.querySelector(".btn-delete")?.addEventListener("click", async () => {
-      if (confirm(`「${rec.className}」のこの実践記録を削除してもよろしいですか？`)) {
+      if (confirm(`「${rec.className}」のこの投稿を削除してもよろしいですか？`)) {
         await window.storageService.deleteRecord(rec.id);
-        this.app.showToast("実践記録を削除しました");
+        this.app.showToast("投稿を削除しました");
         this.app.refreshAllViews();
       }
     });
@@ -339,6 +343,12 @@ class CalendarController {
       });
     });
 
+    card.querySelector(".like-count-text")?.addEventListener("click", () => {
+      if (rec.likes && rec.likes.length > 0) {
+        this.app.showListModal("いいねした人", rec.likes);
+      }
+    });
+
     // いいね
     const btnLike = card.querySelector(".btn-like-action");
     btnLike?.addEventListener("click", async () => {
@@ -346,13 +356,8 @@ class CalendarController {
       if (updated) {
         const currentUserName = window.storageService.getCurrentUser() || "先生";
         const hasLiked = (updated.likes || []).includes(currentUserName);
-        btnLike.querySelector(".like-count").textContent = (updated.likes || []).length;
-        if (hasLiked) {
-          btnLike.classList.add("liked", "fill-liked");
-        } else {
-          btnLike.classList.remove("liked", "fill-liked");
-        }
-        if (typeof confetti === "function") {
+        this.app.refreshAllViews();
+        if (hasLiked && typeof confetti === "function") {
           confetti({ particleCount: 20, spread: 45, origin: { y: 0.8 } });
         }
       }
@@ -371,37 +376,23 @@ class CalendarController {
         e.stopPropagation();
         const emoji = opt.dataset.emoji;
         stampPalette?.classList.add("hidden");
-        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
         
-        // Optimistic update
-        if (!rec.reactions) rec.reactions = [];
-        const currentUserName = window.storageService.getCurrentUser() || "先生";
-        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
-        if (existingIndex >= 0) {
-          rec.reactions.splice(existingIndex, 1);
-        } else {
-          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
-        }
+        await window.storageService.toggleReaction(rec.id, emoji);
         this.app.refreshAllViews();
       });
     });
 
     card.querySelectorAll(".reaction-emoji-badge").forEach(badge => {
-      badge.addEventListener("click", async (e) => {
+      badge.addEventListener("click", (e) => {
         e.stopPropagation();
         const emoji = badge.dataset.emoji;
-        window.storageService.toggleReaction(rec.id, emoji).catch(e => console.error(e));
+        const reactionAuthors = (rec.reactions || [])
+          .filter(r => (typeof r === 'object' ? r.emoji : r) === emoji)
+          .map(r => typeof r === 'object' ? r.author : '先生');
         
-        // Optimistic update
-        if (!rec.reactions) rec.reactions = [];
-        const currentUserName = window.storageService.getCurrentUser() || "先生";
-        const existingIndex = rec.reactions.findIndex(r => typeof r === 'object' ? (r.author === currentUserName && r.emoji === emoji) : (r === emoji && currentUserName === "先生"));
-        if (existingIndex >= 0) {
-          rec.reactions.splice(existingIndex, 1);
-        } else {
-          rec.reactions.push({ isReaction: true, emoji: emoji, author: currentUserName, createdAt: new Date().toISOString() });
+        if (reactionAuthors.length > 0) {
+          this.app.showListModal(`${emoji} した人`, reactionAuthors);
         }
-        this.app.refreshAllViews();
       });
     });
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#2E7D32">
-  <title>insta倉m (インスタクラム) - 小学校実践記録＆学びの可視化</title>
+  <title>insta倉m (インスタクラム) - 小学校投稿＆学びの可視化</title>
   <meta name="description" content="小学校での日々の取り組みを写真とともに記録・蓄積し、実践からカリキュラムを構築・共有するWebアプリ">
   
   <!-- Fonts: Google Fonts -->
@@ -34,7 +34,7 @@
           </div>
           <span class="logo-text">insta<span class="logo-highlight">倉</span>m</span>
         </div>
-        <span class="brand-subtitle">小学校実践記録 ✕ 学びの姿</span>
+        <span class="brand-subtitle">小学校投稿 ✕ 学びの姿</span>
       </div>
 
       <div class="header-center">
@@ -55,7 +55,7 @@
           <i data-lucide="sliders"></i>
         </button>
 
-        <button id="btnPrintSelectorOpen" class="btn-icon" title="実践記録を選択して印刷・おたより作成">
+        <button id="btnPrintSelectorOpen" class="btn-icon" title="投稿を選択して印刷・おたより作成">
           <i data-lucide="printer"></i>
         </button>
 
@@ -100,7 +100,7 @@
         <div class="tabs-wrapper">
           <button class="tab-btn active" data-view="calendar" id="tabCalendar">
             <i data-lucide="calendar"></i>
-            <span>カレンダー (振り返り)</span>
+            <span>カレンダー</span>
           </button>
           <button class="tab-btn" data-view="feed" id="tabFeed">
             <i data-lucide="layout-grid"></i>
@@ -161,8 +161,8 @@
 
               <!-- Calendar Legend -->
               <div class="calendar-legend">
-                <div class="legend-item"><span class="legend-dot record-dot"></span> 実践記録あり</div>
-                <div class="legend-hint">※日付をタップすると右側にその日の記録が展開されます</div>
+                <div class="legend-item"><span class="legend-dot record-dot"></span> 投稿あり</div>
+                <div class="legend-hint">※日付をタップするとその日の記録が展開されます</div>
               </div>
             </div>
 
@@ -172,7 +172,7 @@
                 <div class="panel-date-info">
                   <div class="date-badge" id="selectedDateBadge">8/29</div>
                   <div>
-                    <h3 id="selectedDateHeading" class="panel-title">2026年8月29日の実践記録</h3>
+                    <h3 id="selectedDateHeading" class="panel-title">2026年8月29日の投稿</h3>
                     <p class="panel-subtitle" id="selectedDateSub">0件の記録</p>
                   </div>
                 </div>
@@ -315,7 +315,7 @@
         <div class="modal-header">
           <div class="modal-title-wrap">
             <div class="modal-icon-badge"><i data-lucide="camera"></i></div>
-            <h3 class="modal-title" id="postModalTitle">実践記録の投稿</h3>
+            <h3 class="modal-title" id="postModalTitle">投稿の投稿</h3>
           </div>
           <button class="modal-close" id="btnClosePostModal"><i data-lucide="x"></i></button>
         </div>
@@ -434,8 +434,10 @@
     <!-- 3. Photo Lightbox Modal (フルスクリーン拡大) -->
     <div class="lightbox-overlay hidden" id="lightboxModal">
       <button class="lightbox-close" id="btnCloseLightbox"><i data-lucide="x"></i></button>
-      <div class="lightbox-content">
+      <div class="lightbox-content" style="position: relative;">
+        <button id="lightboxPrevBtn" class="carousel-btn prev-btn" style="display: none; left: -60px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white;"><i data-lucide="chevron-left"></i></button>
         <img id="lightboxImg" src="" alt="拡大写真" class="lightbox-full-img">
+        <button id="lightboxNextBtn" class="carousel-btn next-btn" style="display: none; right: -60px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white;"><i data-lucide="chevron-right"></i></button>
         <div class="lightbox-caption" id="lightboxCaption"></div>
         <div style="text-align: center; margin-top: 16px;">
           <a id="lightboxFullSizeLink" href="#" target="_blank" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.4);">
@@ -451,7 +453,7 @@
         <div class="modal-header">
           <div class="modal-title-wrap">
             <div class="modal-icon-badge"><i data-lucide="printer"></i></div>
-            <h3 class="modal-title">印刷する実践記録の選択</h3>
+            <h3 class="modal-title">印刷する投稿の選択</h3>
           </div>
           <button class="modal-close" id="btnClosePrintSelectModal"><i data-lucide="x"></i></button>
         </div>
@@ -544,12 +546,12 @@
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/tenAspects.js?v=16"></script>
-  <script src="js/sampleData.js?v=16"></script>
-  <script src="js/storage.js?v=16"></script>
-  <script src="js/calendar.js?v=16"></script>
-  <script src="js/feed.js?v=16"></script>
-  <script src="js/analytics.js?v=16"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/tenAspects.js?v=17"></script>
+  <script src="js/sampleData.js?v=17"></script>
+  <script src="js/storage.js?v=17"></script>
+  <script src="js/calendar.js?v=17"></script>
+  <script src="js/feed.js?v=17"></script>
+  <script src="js/analytics.js?v=17"></script>
+  <script src="js/app.js?v=17"></script>
 </body>
 </html>

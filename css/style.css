@@ -1319,15 +1319,21 @@ body {
   transform: scale(1.15);
   color: var(--primary-600);
 }
-.btn-insta-action i.liked {
+.btn-insta-action.liked {
   color: #E53935;
+  background: rgba(229, 57, 53, 0.1);
+  border-radius: 50%;
+}
+.btn-insta-action.liked svg {
   fill: #E53935;
+  color: #E53935;
 }
 
 .feed-stamp-popup {
   position: absolute;
   bottom: 100%;
-  left: 16px;
+  left: 40px;
+  margin-bottom: 8px;
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-full);
@@ -1338,6 +1344,7 @@ body {
   z-index: 50;
   font-size: 0.85rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 .feed-stamp-popup .stamp-opt {
   cursor: pointer;
@@ -3116,9 +3123,12 @@ i.liked {
 i.fill-liked {
   fill: currentColor !important;
 }
-.btn-like-action.liked, .btn-like-action.liked i {
-  color: #E91E63 !important;
+.btn-like-action.liked {
+  color: #E53935 !important;
+  background: rgba(229, 57, 53, 0.1) !important;
+  border-radius: 50%;
 }
-.btn-like-action.fill-liked i {
-  fill: currentColor !important;
+.btn-like-action.liked svg {
+  fill: #E53935 !important;
+  color: #E53935 !important;
 }
