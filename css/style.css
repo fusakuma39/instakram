@@ -1220,6 +1220,24 @@ body {
   .carousel-btn { display: none !important; }
 }
 
+.carousel-dots-container {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-medium);
+  transition: background 0.2s ease;
+}
+.carousel-dot.active {
+  background: var(--primary-500);
+}
+
 .insta-carousel .insta-photo-img.natural-fit {
   flex: 0 0 100%;
   scroll-snap-align: center;
@@ -1325,8 +1343,8 @@ body {
   border-radius: 50%;
 }
 .btn-insta-action.liked svg {
-  fill: #E53935;
-  color: #E53935;
+  fill: #E53935 !important;
+  color: #E53935 !important;
 }
 
 .feed-stamp-popup {
@@ -1923,7 +1941,8 @@ body {
   position: sticky;
   bottom: 0;
   background: var(--bg-surface);
-  padding-bottom: 24px;
+  padding-bottom: 40px;
+  padding-top: 16px;
   margin-top: auto;
 }
 .btn-welcome-submit {
@@ -1936,7 +1955,7 @@ body {
   max-width: 880px;
 }
 .modal-detail {
-  max-width: 960px;
+  max-width: 640px;
   position: relative;
 }
 .modal-settings {
@@ -2244,10 +2263,10 @@ body {
 
 /* Detail Modal */
 .detail-modal-body {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  display: flex;
+  flex-direction: column;
   max-height: 85vh;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .detail-left-media {
   background: #000;
@@ -2255,17 +2274,18 @@ body {
   align-items: center;
   justify-content: center;
   cursor: zoom-in;
+  position: relative;
 }
 .detail-full-photo {
   max-width: 100%;
-  max-height: 85vh;
+  max-height: 60vh;
   object-fit: contain;
 }
 .detail-right-content {
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
-  overflow: hidden;
+  overflow: visible;
 }
 .detail-content-header {
   display: flex;
@@ -2307,7 +2327,7 @@ body {
 }
 .detail-scroll-area {
   padding: 20px;
-  overflow-y: auto;
+  overflow-y: visible;
   flex: 1;
   display: flex;
   flex-direction: column;

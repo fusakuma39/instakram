@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Instagram風タイムラインフィード & 写真グリッドギャラリー コントローラー
  */
 class FeedController {
@@ -226,6 +226,10 @@ class FeedController {
         <div class="heart-overlay-anim hidden"><i data-lucide="heart"></i></div>
         <button class="btn-fullscreen-trigger" title="全画面表示"><i data-lucide="maximize-2"></i></button>
       </div>
+      ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+      <div class="carousel-dots-container">
+        ${rec.photoUrl.split(',').map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
+      </div>` : ''}
 
       <!-- Post Action Bar -->
       <div class="insta-actions-bar">
@@ -415,26 +419,40 @@ class FeedController {
     const carousel = card.querySelector(".insta-carousel");
     const prevBtn = card.querySelector(".prev-btn");
     const nextBtn = card.querySelector(".next-btn");
-    if (carousel && prevBtn && nextBtn) {
-      const updateButtons = () => {
+    const dots = card.querySelectorAll(".carousel-dot");
+    if (carousel) {
+      const updateCarouselUI = () => {
         const scrollLeft = carousel.scrollLeft;
-        const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
-        if (scrollLeft > 5) prevBtn.classList.remove("hidden");
-        else prevBtn.classList.add("hidden");
-        if (scrollLeft < maxScrollLeft - 5) nextBtn.classList.remove("hidden");
-        else nextBtn.classList.add("hidden");
+        const width = carousel.clientWidth || 1;
+        const maxScrollLeft = carousel.scrollWidth - width;
+        if (prevBtn) {
+          if (scrollLeft > 5) prevBtn.classList.remove("hidden");
+          else prevBtn.classList.add("hidden");
+        }
+        if (nextBtn) {
+          if (scrollLeft < maxScrollLeft - 5) nextBtn.classList.remove("hidden");
+          else nextBtn.classList.add("hidden");
+        }
+        if (dots.length > 0) {
+          const index = Math.round(scrollLeft / width);
+          dots.forEach((d, i) => d.classList.toggle("active", i === index));
+        }
       };
-      carousel.addEventListener("scroll", updateButtons);
-      setTimeout(updateButtons, 100);
+      carousel.addEventListener("scroll", updateCarouselUI);
+      setTimeout(updateCarouselUI, 100);
 
-      prevBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        carousel.scrollBy({ left: -carousel.clientWidth, behavior: "smooth" });
-      });
-      nextBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        carousel.scrollBy({ left: carousel.clientWidth, behavior: "smooth" });
-      });
+      if (prevBtn) {
+        prevBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          carousel.scrollBy({ left: -carousel.clientWidth, behavior: "smooth" });
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          carousel.scrollBy({ left: carousel.clientWidth, behavior: "smooth" });
+        });
+      }
     }
 
     return card;
@@ -517,11 +535,27 @@ class FeedController {
     }
 
     this.detailModalBody.innerHTML = `
-      <div class="detail-left-media" title="横スクロールで複数枚表示（クリックで拡大）">
-        <div class="insta-carousel">
-          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
-            <img src="${url}" alt="投稿写真" class="detail-full-photo insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
-          `).join('')}
+      <div class="detail-left-col" style="display: flex; flex-direction: column; background: var(--bg-surface);">
+        <div class="detail-left-media" title="横スクロールで複数枚表示（クリックで拡大）" style="flex: 1; min-height: 300px;">
+          <div class="insta-carousel">
+            ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
+              <img src="${url}" alt="投稿写真" class="detail-full-photo insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+            `).join('')}
+          </div>
+          ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
+          ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+            <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
+            <button class="carousel-btn next-btn" style="right:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-right"></i></button>
+          ` : ''}
+          ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+          <div class="carousel-dots-container" style="position: absolute; bottom: 12px; width: 100%; margin: 0; z-index: 20;">
+            ${rec.photoUrl.split(',').map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
+          </div>` : ''}
+        </div>
+        <div class="detail-left-caption" style="padding: 20px; border-top: 1px solid var(--border-light);">
+          <h4 class="detail-section-title" style="margin-top: 0;"><i data-lucide="message-square"></i> 実践の様子・児童のつぶやき</h4>
+          <p class="detail-comment-text">${this.escapeHtml(rec.comment)}</p>
+          ${aspectTagsHtml ? `<div class="detail-aspects-hashtags">${aspectTagsHtml}</div>` : ''}
         </div>
       </div>
       <div class="detail-right-content">
@@ -538,11 +572,6 @@ class FeedController {
         </div>
 
         <div class="detail-scroll-area">
-          <div class="detail-section main-caption-section">
-            <h4 class="detail-section-title"><i data-lucide="message-square"></i> 実践の様子・児童のつぶやき</h4>
-            <p class="detail-comment-text">${this.escapeHtml(rec.comment)}</p>
-            ${aspectTagsHtml ? `<div class="detail-aspects-hashtags">${aspectTagsHtml}</div>` : ''}
-          </div>
 
           <div class="detail-section comments-thread-section">
             <h4 class="detail-section-title">
@@ -564,13 +593,56 @@ class FeedController {
     `;
 
     // 写真クリックで拡大ボックス
-    this.detailModalBody.querySelector(".detail-left-media")?.addEventListener("click", () => {
+    const leftMedia = this.detailModalBody.querySelector(".detail-left-media");
+    if (leftMedia) {
+      leftMedia.addEventListener("click", () => {
+        const carousel = this.detailModalBody.querySelector(".insta-carousel");
+        const scrollLeft = carousel ? carousel.scrollLeft : 0;
+        const width = carousel ? carousel.clientWidth : 1;
+        const currentIndex = Math.round(scrollLeft / width);
+        this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`, currentIndex);
+      });
+      
       const carousel = this.detailModalBody.querySelector(".insta-carousel");
-      const scrollLeft = carousel ? carousel.scrollLeft : 0;
-      const width = carousel ? carousel.clientWidth : 1;
-      const currentIndex = Math.round(scrollLeft / width);
-      this.openLightbox(rec.photoUrl, `${rec.className} (${rec.date}) - ${rec.comment}`, currentIndex);
-    });
+      const prevBtn = this.detailModalBody.querySelector(".prev-btn");
+      const nextBtn = this.detailModalBody.querySelector(".next-btn");
+      const dots = this.detailModalBody.parentElement.querySelectorAll(".carousel-dot");
+      
+      if (carousel) {
+        const updateCarouselUI = () => {
+          const scrollLeft = carousel.scrollLeft;
+          const width = carousel.clientWidth || 1;
+          const maxScrollLeft = carousel.scrollWidth - width;
+          if (prevBtn) {
+            if (scrollLeft > 5) prevBtn.classList.remove("hidden");
+            else prevBtn.classList.add("hidden");
+          }
+          if (nextBtn) {
+            if (scrollLeft < maxScrollLeft - 5) nextBtn.classList.remove("hidden");
+            else nextBtn.classList.add("hidden");
+          }
+          if (dots.length > 0) {
+            const index = Math.round(scrollLeft / width);
+            dots.forEach((d, i) => d.classList.toggle("active", i === index));
+          }
+        };
+        carousel.addEventListener("scroll", updateCarouselUI);
+        setTimeout(updateCarouselUI, 100);
+
+        if (prevBtn) {
+          prevBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            carousel.scrollBy({ left: -carousel.clientWidth, behavior: "smooth" });
+          });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            carousel.scrollBy({ left: carousel.clientWidth, behavior: "smooth" });
+          });
+        }
+      }
+    }
 
     const modalCommentForm = this.detailModalBody.querySelector("#modalAddCommentForm");
     modalCommentForm?.addEventListener("submit", async (e) => {

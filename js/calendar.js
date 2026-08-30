@@ -269,8 +269,12 @@ class CalendarController {
         </div>
       </div>
 
-      <div class="record-photo-wrapper">
-        <img src="${rec.photoUrl ? rec.photoUrl.split(',')[0] : ''}" alt="投稿写真" class="record-main-photo" loading="lazy">
+      <div class="record-photo-wrapper" title="横スクロールで複数枚表示（クリックで拡大）">
+        <div class="insta-carousel" style="display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -ms-overflow-style:none;">
+          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
+            <img src="${url}" alt="投稿写真" class="record-main-photo insta-photo-img natural-fit" style="flex:0 0 100%; scroll-snap-align:center; object-fit:contain;" loading="${idx === 0 ? 'lazy' : 'lazy'}">
+          `).join('')}
+        </div>
         ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
         ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
           <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
@@ -278,6 +282,10 @@ class CalendarController {
         ` : ''}
         <button class="btn-photo-expand" title="写真を拡大"><i data-lucide="maximize-2"></i></button>
       </div>
+      ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
+      <div class="carousel-dots-container">
+        ${rec.photoUrl.split(',').map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
+      </div>` : ''}
 
       <div class="record-card-body">
         ${aspectTagsHtml ? `<div class="aspects-list-row">${aspectTagsHtml}</div>` : ''}
@@ -349,6 +357,46 @@ class CalendarController {
       }
     });
 
+    const carousel = card.querySelector(".insta-carousel");
+    const prevBtn = card.querySelector(".prev-btn");
+    const nextBtn = card.querySelector(".next-btn");
+    const dots = card.querySelectorAll(".carousel-dot");
+    
+    if (carousel) {
+      const updateCarouselUI = () => {
+        const scrollLeft = carousel.scrollLeft;
+        const width = carousel.clientWidth || 1;
+        const maxScrollLeft = carousel.scrollWidth - width;
+        if (prevBtn) {
+          if (scrollLeft > 5) prevBtn.classList.remove("hidden");
+          else prevBtn.classList.add("hidden");
+        }
+        if (nextBtn) {
+          if (scrollLeft < maxScrollLeft - 5) nextBtn.classList.remove("hidden");
+          else nextBtn.classList.add("hidden");
+        }
+        if (dots.length > 0) {
+          const index = Math.round(scrollLeft / width);
+          dots.forEach((d, i) => d.classList.toggle("active", i === index));
+        }
+      };
+      carousel.addEventListener("scroll", updateCarouselUI);
+      setTimeout(updateCarouselUI, 100);
+
+      if (prevBtn) {
+        prevBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          carousel.scrollBy({ left: -carousel.clientWidth, behavior: "smooth" });
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          carousel.scrollBy({ left: carousel.clientWidth, behavior: "smooth" });
+        });
+      }
+    }
+
     // いいね
     const btnLike = card.querySelector(".btn-like-action");
     btnLike?.addEventListener("click", async () => {
@@ -396,32 +444,6 @@ class CalendarController {
       });
     });
 
-    const imgEl = card.querySelector(".record-main-photo");
-    const prevBtn = card.querySelector(".prev-btn");
-    const nextBtn = card.querySelector(".next-btn");
-    if (imgEl && prevBtn && nextBtn && rec.photoUrl) {
-      const urls = rec.photoUrl.split(',');
-      let currentIndex = 0;
-      const updateButtons = () => {
-        if (currentIndex > 0) prevBtn.classList.remove("hidden");
-        else prevBtn.classList.add("hidden");
-        if (currentIndex < urls.length - 1) nextBtn.classList.remove("hidden");
-        else nextBtn.classList.add("hidden");
-      };
-      updateButtons();
-      prevBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (currentIndex > 0) currentIndex--;
-        imgEl.src = urls[currentIndex];
-        updateButtons();
-      });
-      nextBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (currentIndex < urls.length - 1) currentIndex++;
-        imgEl.src = urls[currentIndex];
-        updateButtons();
-      });
-    }
 
     return card;
   }
