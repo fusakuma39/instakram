@@ -3143,12 +3143,16 @@ i.liked {
 i.fill-liked {
   fill: currentColor !important;
 }
-.btn-like-action.liked {
+.btn-like-action.liked,
+.btn-feed-like.liked,
+.btn-insta-action.liked {
   color: #E53935 !important;
   background: rgba(229, 57, 53, 0.1) !important;
   border-radius: 50%;
 }
-.btn-like-action.liked svg {
+.btn-like-action.liked svg,
+.btn-feed-like.liked svg,
+.btn-insta-action.liked svg {
   fill: #E53935 !important;
   color: #E53935 !important;
 }
