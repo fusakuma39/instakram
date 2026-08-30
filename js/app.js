@@ -1,4 +1,4 @@
-﻿/**
+/**
  * insta倉m - メインアプリケーション コントローラー (印刷選択 & UI最適化)
  */
 class EduRecordApp {
@@ -1278,6 +1278,21 @@ class EduRecordApp {
 
 // 起動
 document.addEventListener("DOMContentLoaded", () => {
+  if (navigator.userAgent.indexOf("Line") > -1) {
+    const banner = document.createElement("div");
+    banner.style.background = "#FFEBEE";
+    banner.style.color = "#C62828";
+    banner.style.padding = "12px 16px";
+    banner.style.textAlign = "center";
+    banner.style.fontSize = "0.85rem";
+    banner.style.fontWeight = "bold";
+    banner.style.borderBottom = "1px solid #FFCDD2";
+    banner.style.zIndex = "10000";
+    banner.style.position = "relative";
+    banner.innerHTML = "⚠️ LINEのブラウザでは写真が表示されません。<br>右下のメニュー（⋮ または ⠇）から「ブラウザで開く」を選び、SafariやChromeでご覧ください。";
+    document.body.prepend(banner);
+  }
+
   window.app = new EduRecordApp();
   window.app.init();
 });
