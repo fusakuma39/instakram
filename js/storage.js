@@ -210,6 +210,9 @@ class StorageService {
       }
 
       const result = await res.json();
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
       if (result && result.photoUrl && result.photoUrl !== record.photoUrl) {
         let newPhotoUrl = result.photoUrl;
         if (newPhotoUrl.includes("drive.google.com")) {
@@ -360,7 +363,15 @@ class StorageService {
       comments: [],
       createdAt: new Date().toISOString()
     };
-    return await this.sendToGas(systemRecord);
+    try {
+      await this.sendToGas(systemRecord);
+      localStorage.setItem(this.gradeHierarchyKey, JSON.stringify(hierarchy));
+      return true;
+    } catch (e) {
+      console.error(e);
+      alert("クラス設定の保存に失敗しました。エラー: " + e.message);
+      return false;
+    }
   }
 }
 

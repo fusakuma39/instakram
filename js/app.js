@@ -738,6 +738,7 @@ class EduRecordApp {
       className: selectedClass,
       photoUrl: existingUrls.join(','),
       images: base64Images,
+      filename: recordId + ".jpg",
       driveUrl: "",
       comment: this.recordCommentInput.value,
       aspects: Array.from(this.selectedAspectIds),
