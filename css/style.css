@@ -191,6 +191,7 @@ body {
   display: flex;
   align-items: baseline;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -232,6 +233,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 .logo-highlight {
   color: var(--primary-500);
@@ -250,6 +252,7 @@ body {
 .header-center {
   flex: 1;
   max-width: 440px;
+  min-width: 100px;
 }
 
 .search-bar {
@@ -274,6 +277,7 @@ body {
 }
 .search-bar input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   outline: none;
@@ -294,6 +298,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .user-profile-badge {
@@ -329,6 +334,7 @@ body {
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 .user-edit-icon {
   width: 13px;
@@ -494,6 +500,12 @@ body {
 .tabs-wrapper {
   display: flex;
   gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs-wrapper::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
