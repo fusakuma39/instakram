@@ -805,6 +805,7 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-xs);
   transition: all var(--tr-fast);
+  flex-shrink: 0;
 }
 .day-record-card:hover {
   border-color: var(--primary-200);
@@ -1867,7 +1868,7 @@ body {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   background: rgba(20, 30, 24, 0.65);
   backdrop-filter: blur(8px);
   z-index: 1000;
@@ -1876,6 +1877,16 @@ body {
   justify-content: center;
   padding: 16px;
   animation: fadeIn 0.2s ease-out;
+}
+@media (max-width: 600px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 10dvh;
+    overflow-y: auto;
+  }
+  .modal-card {
+    margin: auto;
+  }
 }
 
 .modal-card {
@@ -1912,7 +1923,7 @@ body {
   display: flex;
   flex-direction: column;
   max-height: 90dvh;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .welcome-header {
   padding: 32px 32px 0 32px;
