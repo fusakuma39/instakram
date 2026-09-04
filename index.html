@@ -19,7 +19,9 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-  <link rel="stylesheet" href="css/style.css?v=21">
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -542,15 +544,23 @@
       <!-- Dynamically filled with selected cards for print -->
     </div>
 
+  </div> <!-- End of .app-layout -->
+
+  <!-- Global Loading Overlay -->
+  <div class="global-loading-overlay hidden" id="globalLoadingOverlay">
+    <div class="global-loading-spinner">
+      <i data-lucide="loader" class="lucide-spin"></i>
+      <p>投稿処理中...<br><span style="font-size: 0.85em; font-weight: normal; opacity: 0.8;">写真を圧縮・保存しています</span></p>
+    </div>
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/tenAspects.js?v=18"></script>
-  <script src="js/sampleData.js?v=18"></script>
-  <script src="js/storage.js?v=18"></script>
-  <script src="js/calendar.js?v=18"></script>
-  <script src="js/feed.js?v=18"></script>
-  <script src="js/analytics.js?v=18"></script>
-  <script src="js/app.js?v=18"></script>
+  <script src="js/tenAspects.js?v=24"></script>
+  <script src="js/sampleData.js?v=24"></script>
+  <script src="js/storage.js?v=24"></script>
+  <script src="js/calendar.js?v=25"></script>
+  <script src="js/feed.js?v=24"></script>
+  <script src="js/analytics.js?v=24"></script>
+  <script src="js/app.js?v=26"></script>
 </body>
 </html>

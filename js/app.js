@@ -687,7 +687,7 @@ class EduRecordApp {
       this.updateFormClassOptions(matchedGrade.gradeId, rec.className);
     }
 
-    this.currentPhotosData = rec.photoUrl ? rec.photoUrl.split(',') : [];
+    this.currentPhotosData = (rec.optimisticPhotoUrls && rec.optimisticPhotoUrls.length > 0) ? [...rec.optimisticPhotoUrls] : (rec.photoUrl ? rec.photoUrl.split(',') : []);
     this.previewImagesWrapper.innerHTML = "";
     this.currentPhotosData.forEach(url => {
       const imgEl = document.createElement("img");
@@ -725,8 +725,19 @@ class EduRecordApp {
       return;
     }
 
-    const isEdit = !!this.recordIdInput.value;
-    const recordId = this.recordIdInput.value || "rec_" + Date.now();
+    // 連打防止＆処理中UIの表示
+    const btnSubmit = document.getElementById("btnSubmitPost");
+    if (btnSubmit) btnSubmit.disabled = true;
+    
+    const loadingOverlay = document.getElementById("globalLoadingOverlay");
+    if (loadingOverlay) loadingOverlay.classList.remove("hidden");
+
+    // ブラウザに「処理中画面」を描画させるための微小な待機（重い処理でフリーズする前に描画させる）
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+      const isEdit = !!this.recordIdInput.value;
+      const recordId = this.recordIdInput.value || "rec_" + Date.now();
     const author = this.recordAuthorInput.value.trim() || window.storageService.getCurrentUser() || "先生";
     const selectedClass = this.recordClassSelect.value;
 
@@ -765,7 +776,20 @@ class EduRecordApp {
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
     }
 
-    await this.refreshAllViews();
+    // モーダルが閉じるアニメーションを阻害しないよう、少し遅延させてからDOMを再描画する
+    setTimeout(() => {
+      this.refreshAllViews();
+    }, 50);
+
+    } catch (err) {
+      console.error(err);
+      alert("エラーが発生しました。");
+    } finally {
+      const loadingOverlay = document.getElementById("globalLoadingOverlay");
+      if (loadingOverlay) loadingOverlay.classList.add("hidden");
+      const btnSubmit = document.getElementById("btnSubmitPost");
+      if (btnSubmit) btnSubmit.disabled = false;
+    }
   }
 
   // ================= 印刷選択モーダル =================

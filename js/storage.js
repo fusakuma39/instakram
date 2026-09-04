@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 完全クラウド同期対応 ストレージサービス (Google Apps Script / Drive / Spreadsheet)
  * ローカルストレージ(IndexedDB, localStorage)を廃止し、sessionStorageとメモリで状態管理を行います。
  */
@@ -186,20 +186,19 @@ class StorageService {
     }
     record.updatedAt = new Date().toISOString();
 
-    // 1. GASに送信 (非同期ではなく待機する。失敗してもローカルメモリには保存する)
-    try {
-      await this.sendToGas(record);
-    } catch (err) {
-      console.error("GAS Error:", err);
-      alert("ドライブへの保存に失敗しました。\nエラー詳細: " + err.message + "\n\n※AIアシスタントにこのエラーメッセージを伝えてください。");
+    // オプティミスティックUI用に一時的な画像URL配列をセット
+    const optimisticRecord = { ...record };
+    if (optimisticRecord.images && optimisticRecord.images.length > 0) {
+      optimisticRecord.optimisticPhotoUrls = optimisticRecord.images;
+      optimisticRecord.isUploading = true; // 画像アップロード中のフラグ
     }
-      
-    // 2. メモリのレコードを更新
-    const index = this.records.findIndex(r => r.id === record.id);
+
+    // 1. 即座にメモリのレコードを更新 (オプティミスティックUI)
+    const index = this.records.findIndex(r => r.id === optimisticRecord.id);
     if (index >= 0) {
-      this.records[index] = record;
+      this.records[index] = optimisticRecord;
     } else {
-      this.records.unshift(record); // 先頭に追加
+      this.records.unshift(optimisticRecord); // 先頭に追加
     }
 
     // 降順ソート維持
@@ -209,7 +208,32 @@ class StorageService {
       return dateB - dateA;
     });
 
-    return record;
+    localStorage.setItem("insta_records_cache", JSON.stringify(this.records));
+
+    // 2. バックグラウンドでGASに送信
+    this.sendToGas(record).then(() => {
+      // 送信完了後、正規のphotoUrl(Google DriveのURL)に置き換わったものをキャッシュに反映
+      const realIndex = this.records.findIndex(r => r.id === record.id);
+      if (realIndex >= 0) {
+        // Base64は重いので破棄し、GASから返ってきたDriveのURLを使用する
+        const updatedRecord = { ...record };
+        delete updatedRecord.images;
+        delete updatedRecord.image;
+        this.records[realIndex] = updatedRecord;
+        localStorage.setItem("insta_records_cache", JSON.stringify(this.records));
+        
+        // GAS保存完了後にUIを再描画し、重いBase64ではなく正規のDrive画像URLを画面に反映させる
+        if (window.app && typeof window.app.refreshAllViews === "function") {
+          window.app.refreshAllViews();
+        }
+      }
+    }).catch(err => {
+      console.error("GAS Error:", err);
+      // エラー処理（必要に応じてUIに通知する仕組みを入れることも可能）
+    });
+
+    // 非同期処理の完了を待たずに即座にレコードを返す
+    return optimisticRecord;
   }
 
   // GASへ投稿データ全体（写真Base64＋テキスト一式）を送信
@@ -274,19 +298,22 @@ class StorageService {
   }
 
   async deleteRecord(id) {
+    // 1. 即座にメモリのレコードを削除 (オプティミスティックUI)
+    this.records = this.records.filter(r => r.id !== id);
+    localStorage.setItem("insta_records_cache", JSON.stringify(this.records));
+
+    // 2. バックグラウンドでGASに送信
     if (this.gasUrl) {
-      try {
-        await fetch(this.gasUrl, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "delete", id: id })
-        });
-      } catch (err) {
+      fetch(this.gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "delete", id: id })
+      }).catch(err => {
         console.warn("Delete request to GAS failed", err);
-      }
+      });
     }
 
-    this.records = this.records.filter(r => r.id !== id);
+    // 非同期処理の完了を待たずに即座に完了を返す
     return true;
   }
 

@@ -117,12 +117,22 @@ class CalendarController {
       let thumbHtml = "";
       if (hasRecords) {
         const latestRec = dayRecords[0];
-        thumbHtml = `
-          <div class="calendar-day-thumb">
-            <img src="${latestRec.photoUrl ? latestRec.photoUrl.split(',')[0] : ''}" alt="サムネイル" loading="lazy">
-            <span class="record-count-badge">${dayRecords.length}</span>
-          </div>
-        `;
+        if (latestRec.isUploading) {
+          thumbHtml = `
+            <div class="calendar-day-thumb" style="display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+              <i data-lucide="loader" class="lucide-spin" style="width: 20px; height: 20px; color: #666;"></i>
+              <span class="record-count-badge">${dayRecords.length}</span>
+            </div>
+          `;
+        } else {
+          const latestPhoto = (latestRec.optimisticPhotoUrls && latestRec.optimisticPhotoUrls.length > 0) ? latestRec.optimisticPhotoUrls[0] : (latestRec.photoUrl ? latestRec.photoUrl.split(',')[0] : '');
+          thumbHtml = `
+            <div class="calendar-day-thumb">
+              <img src="${latestPhoto}" alt="サムネイル" loading="lazy">
+              <span class="record-count-badge">${dayRecords.length}</span>
+            </div>
+          `;
+        }
       }
 
       // ハッシュタグインジケーター
@@ -271,21 +281,41 @@ class CalendarController {
 
       <div class="record-photo-wrapper" title="横スクロールで複数枚表示（クリックで拡大）">
         <div class="insta-carousel" style="display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -ms-overflow-style:none;">
-          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
-            <img src="${url}" alt="投稿写真" class="record-main-photo insta-photo-img natural-fit" style="flex:0 0 100%; scroll-snap-align:center; object-fit:contain;" loading="${idx === 0 ? 'lazy' : 'lazy'}">
-          `).join('')}
+          ${(() => {
+            if (rec.isUploading) {
+              return `
+                <div class="upload-spinner-box" style="flex:0 0 100%; height:300px;">
+                  <i data-lucide="loader" class="lucide-spin"></i>
+                  <p>アップロード中...</p>
+                </div>
+              `;
+            }
+            const photos = rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : []);
+            return photos.map((url, idx) => `
+              <img src="${url}" alt="投稿写真" class="record-main-photo insta-photo-img natural-fit" style="flex:0 0 100%; scroll-snap-align:center; object-fit:contain;" loading="${idx === 0 ? 'eager' : 'lazy'}">
+            `).join('');
+          })()}
         </div>
-        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
-        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
-          <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
-          <button class="carousel-btn next-btn" style="right:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-right"></i></button>
-        ` : ''}
+        ${(() => {
+          const count = (rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : [])).length;
+          return count > 1 ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${count}枚</div>` : '';
+        })()}
+        ${(() => {
+          const count = (rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : [])).length;
+          return count > 1 ? `
+            <button class="carousel-btn prev-btn hidden" style="left:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-left"></i></button>
+            <button class="carousel-btn next-btn" style="right:8px;top:50%;transform:translateY(-50%);position:absolute;z-index:20;"><i data-lucide="chevron-right"></i></button>
+          ` : '';
+        })()}
         <button class="btn-photo-expand" title="写真を拡大"><i data-lucide="maximize-2"></i></button>
       </div>
-      ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
-      <div class="carousel-dots-container">
-        ${rec.photoUrl.split(',').map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
-      </div>` : ''}
+      ${(() => {
+        const photos = rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : []);
+        return photos.length > 1 ? `
+        <div class="carousel-dots-container">
+          ${photos.map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
+        </div>` : '';
+      })()}
 
       <div class="record-card-body">
         ${aspectTagsHtml ? `<div class="aspects-list-row">${aspectTagsHtml}</div>` : ''}

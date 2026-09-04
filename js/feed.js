@@ -214,22 +214,42 @@ class FeedController {
       <!-- Post Photo: Natural Aspect Ratio with Lightbox Click & Double-Tap Heart -->
       <div class="insta-photo-box natural-aspect" title="横スクロールで複数枚表示（右下クリックで拡大）">
         <div class="insta-carousel">
-          ${(rec.photoUrl ? rec.photoUrl.split(',') : []).map((url, idx) => `
-            <img src="${url}" alt="投稿写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'lazy' : 'lazy'}">
-          `).join('')}
+          ${(() => {
+            if (rec.isUploading) {
+              return `
+                <div class="upload-spinner-box">
+                  <i data-lucide="loader" class="lucide-spin"></i>
+                  <p>アップロード中...</p>
+                </div>
+              `;
+            }
+            const photos = rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : []);
+            return photos.map((url, idx) => `
+              <img src="${url}" alt="投稿写真" class="insta-photo-img natural-fit" loading="${idx === 0 ? 'eager' : 'lazy'}">
+            `).join('');
+          })()}
         </div>
-        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${rec.photoUrl.split(',').length}枚</div>` : ''}
-        ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
-          <button class="carousel-btn prev-btn hidden"><i data-lucide="chevron-left"></i></button>
-          <button class="carousel-btn next-btn"><i data-lucide="chevron-right"></i></button>
-        ` : ''}
+        ${(() => {
+          const count = (rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : [])).length;
+          return count > 1 ? `<div class="multi-photo-indicator"><i data-lucide="layers"></i> ${count}枚</div>` : '';
+        })()}
+        ${(() => {
+          const count = (rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : [])).length;
+          return count > 1 ? `
+            <button class="carousel-btn prev-btn hidden"><i data-lucide="chevron-left"></i></button>
+            <button class="carousel-btn next-btn"><i data-lucide="chevron-right"></i></button>
+          ` : '';
+        })()}
         <div class="heart-overlay-anim hidden"><i data-lucide="heart"></i></div>
         <button class="btn-fullscreen-trigger" title="全画面表示"><i data-lucide="maximize-2"></i></button>
       </div>
-      ${(rec.photoUrl && rec.photoUrl.split(',').length > 1) ? `
-      <div class="carousel-dots-container">
-        ${rec.photoUrl.split(',').map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
-      </div>` : ''}
+      ${(() => {
+        const photos = rec.optimisticPhotoUrls || (rec.photoUrl ? rec.photoUrl.split(',') : []);
+        return photos.length > 1 ? `
+        <div class="carousel-dots-container">
+          ${photos.map((_, idx) => `<span class="carousel-dot ${idx === 0 ? 'active' : ''}"></span>`).join('')}
+        </div>` : '';
+      })()}
 
       <!-- Post Action Bar -->
       <div class="insta-actions-bar">
